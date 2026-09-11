@@ -20,7 +20,8 @@ const getGeminiModel = () => {
   }
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const modelName = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+    return genAI.getGenerativeModel({ model: modelName });
   } catch (err) {
     console.warn('Gemini client initialization failed, falling back to algorithmic AI:', err.message);
     return null;
