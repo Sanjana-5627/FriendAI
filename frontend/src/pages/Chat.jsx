@@ -4,7 +4,6 @@ import {
   Send, 
   Sparkles, 
   CheckSquare, 
-  Target, 
   Zap, 
   Plus, 
   Volume2, 
@@ -13,24 +12,69 @@ import {
   MicOff, 
   ShieldAlert,
   Bot,
-  User
+  User,
+  BookOpen,
+  MessageSquare,
+  History,
+  Calendar,
+  ChevronRight,
+  ArrowRight,
+  CheckCircle2,
+  Moon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import SafetyCrisisModal from '../components/SafetyCrisisModal';
 
+const PROMPT_STARTERS = [
+  "My morning started rushed with work, but in the afternoon I took a walk...",
+  "Today was really draining and stressful, especially dealing with...",
+  "It was a surprisingly calm and productive day. I managed to...",
+  "I felt a bit disconnected and lonely today, and spent too much time on screens..."
+];
+
 const Chat = () => {
-  const [messages, setMessages] = useState([]);
-  const [textInput, setTextInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [suggestedActions, setSuggestedActions] = useState([]);
-  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [activeTab, setActiveTab] = useState('debrief'); // 'debrief' | 'chat' | 'history'
+  
+  // Day Debrief state
+  const [dayStory, setDayStory] = useState('');
+  const [isDebriefLoading, setIsDebriefLoading] = useState(false);
+  const [currentReview, setCurrentReview] = useState(null);
+  const [pastReflections, setPastReflections] = useState([]);
   const [isListening, setIsListening] = useState(false);
+  
+  // Chat dialogue state
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(false);
   const [safetyModalOpen, setSafetyModalOpen] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Load chat history from localStorage
+  // Load chat & past reflections
   useEffect(() => {
+    loadChatHistory();
+    loadPastReflections();
+    setupSpeechRecognition();
+  }, []);
+
+  const loadPastReflections = async () => {
+    try {
+      const res = await apiHelpers.getReflections();
+      setPastReflections(res.data || []);
+      // If today already has a reflection, show it
+      const today = new Date().toISOString().split('T')[0];
+      const todayReflection = (res.data || []).find(r => r.date === today && r.ai_response);
+      if (todayReflection) {
+        setCurrentReview(todayReflection.ai_response);
+      }
+    } catch (err) {
+      console.warn('Could not load past reflections:', err);
+    }
+  };
+
+  const loadChatHistory = () => {
     const saved = localStorage.getItem('friendai_chat_history');
     if (saved) {
       try {
@@ -41,12 +85,12 @@ const Chat = () => {
     } else {
       initializeWelcomeMessage();
     }
-  }, []);
+  };
 
   const initializeWelcomeMessage = () => {
     setMessages([{
       type: 'ai',
-      content: "Hello! I'm your AI personal wellness companion. I'm here to listen, help you reflect, plan your day, or suggest small healthy steps when you feel overwhelmed or lonely. What's on your mind today?",
+      content: "Hello. I'm here as your personal confidant. Whether you want to talk about how your day felt, work through something weighing on your mind, or plan tomorrow, I'm listening.",
       timestamp: new Date().toISOString()
     }]);
   };
@@ -58,8 +102,8 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Setup Web Speech API speech recognition if available
-  useEffect(() => {
+  // Setup Web Speech Recognition
+  const setupSpeechRecognition = () => {
     if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -69,26 +113,24 @@ const Chat = () => {
 
       recognitionRef.current.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        setTextInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+        if (activeTab === 'debrief') {
+          setDayStory(prev => (prev ? `${prev} ${transcript}` : transcript));
+        } else {
+          setChatInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+        }
         setIsListening(false);
       };
 
-      recognitionRef.current.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
+      recognitionRef.current.onerror = () => setIsListening(false);
+      recognitionRef.current.onend = () => setIsListening(false);
     }
-  }, []);
+  };
 
-  const toggleSpeechRecognition = () => {
+  const toggleSpeech = () => {
     if (!recognitionRef.current) {
-      toast.error('Speech recognition is not supported in this browser.');
+      toast.error('Voice dictation is not supported in this browser.');
       return;
     }
-
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
@@ -103,271 +145,557 @@ const Chat = () => {
     }
   };
 
-  const speakText = (text) => {
-    if (!ttsEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
+  // 1. Submit Day Debrief
+  const handleGenerateDayReview = async () => {
+    if (!dayStory.trim()) {
+      toast.error('Please share a few sentences about your day.');
+      return;
+    }
+
+    setIsDebriefLoading(true);
+    try {
+      const res = await apiHelpers.generateDayReview(dayStory.trim());
+      if (res.data.isCrisis) {
+        setSafetyModalOpen(true);
+        return;
+      }
+      setCurrentReview(res.data);
+      toast.success('Your Day in Review has been generated.');
+      loadPastReflections();
+    } catch (err) {
+      console.error('Day review error:', err);
+      toast.error('Could not generate day review. Please try again.');
+    } finally {
+      setIsDebriefLoading(false);
+    }
   };
 
-  const handleSendMessage = async (e) => {
-    e?.preventDefault();
-    if (!textInput.trim() || loading) return;
+  // 2. Chat message send
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim() || isChatLoading) return;
 
-    const userText = textInput.trim();
-    setTextInput('');
-
-    const newMsg = {
+    const userMessage = {
       type: 'user',
-      content: userText,
+      content: chatInput.trim(),
       timestamp: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, newMsg]);
-    setLoading(true);
+    const newHistory = [...messages, userMessage];
+    setMessages(newHistory);
+    setChatInput('');
+    setIsChatLoading(true);
 
     try {
-      const res = await apiHelpers.chat(userText, messages);
-      const data = res.data;
-
-      if (data.isCrisis) {
+      const res = await apiHelpers.chat(userMessage.content, newHistory.slice(-6));
+      
+      if (res.data.isCrisis) {
         setSafetyModalOpen(true);
       }
 
       const aiReply = {
         type: 'ai',
-        content: data.reply || data.message || "I'm right here with you. How can I support you right now?",
-        timestamp: new Date().toISOString(),
-        suggestions: data.suggestions || []
+        content: res.data.reply || res.data.message,
+        suggestions: res.data.suggestions || [],
+        timestamp: new Date().toISOString()
       };
 
       setMessages(prev => [...prev, aiReply]);
 
-      if (data.suggestions && data.suggestions.length > 0) {
-        setSuggestedActions(data.suggestions);
+      if (ttsEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(aiReply.content);
+        utterance.rate = 1.0;
+        window.speechSynthesis.speak(utterance);
       }
-
-      if (ttsEnabled && aiReply.content) {
-        speakText(aiReply.content);
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
-      toast.error('Could not send message. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConvertToAction = async (actionText, type) => {
-    try {
-      if (type === 'task') {
-        await apiHelpers.createTask({
-          title: actionText,
-          priority: 'medium',
-          category: 'wellness'
-        });
-        toast.success(`✓ Created task: "${actionText}"`);
-      } else if (type === 'habit') {
-        await apiHelpers.createHabit({
-          name: actionText,
-          category: 'health',
-          frequency: 'daily'
-        });
-        toast.success(`✓ Created daily habit: "${actionText}"`);
-      } else if (type === 'goal') {
-        await apiHelpers.createGoal({
-          title: actionText,
-          category: 'personal'
-        });
-        toast.success(`✓ Created goal: "${actionText}"`);
-      }
-      setSuggestedActions(prev => prev.filter(a => a !== actionText));
     } catch (err) {
-      toast.error('Failed to create action');
+      console.error('Chat error:', err);
+      toast.error('Failed to receive response.');
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
-  const clearChat = () => {
-    localStorage.removeItem('friendai_chat_history');
-    initializeWelcomeMessage();
-    toast.success('Chat history cleared');
+  const handleAddActionAsTask = async (title) => {
+    try {
+      await apiHelpers.createTask({
+        title,
+        priority: 'medium',
+        category: 'wellness'
+      });
+      toast.success(`✓ Added "${title}" to your tasks!`);
+    } catch (err) {
+      toast.error('Failed to create task');
+    }
+  };
+
+  const handleAddActionAsHabit = async (name) => {
+    try {
+      await apiHelpers.createHabit({
+        name,
+        frequency: 'daily',
+        category: 'wellness'
+      });
+      toast.success(`✓ Added "${name}" to your daily habits!`);
+    } catch (err) {
+      toast.error('Failed to create habit');
+    }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 h-[calc(100vh-5rem)] flex flex-col">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
-      {/* Top Controls Header */}
-      <div className="bg-white dark:bg-gray-900 px-4 py-3 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
-            <Bot className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-              <span>FriendAI Companion</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            </h2>
-            <p className="text-[10px] text-gray-400">Wellness & empathetic listener</p>
-          </div>
+      {/* Top Header & Tab Navigation (Monochromatic & Clean) */}
+      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Personal Confidant & Reflection
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Tell FriendAI about your complete day to receive meaningful reviews and thoughtful reflections.
+          </p>
         </div>
 
-        <div className="flex items-center space-x-1.5">
-          {/* TTS Audio Toggle */}
+        {/* Tab Pills */}
+        <div className="flex items-center space-x-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
           <button
-            onClick={() => setTtsEnabled(!ttsEnabled)}
-            className={`p-2 rounded-xl text-xs flex items-center space-x-1 transition-colors ${
-              ttsEnabled 
-                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' 
-                : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            onClick={() => setActiveTab('debrief')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+              activeTab === 'debrief'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
-            title="Read responses aloud"
           >
-            {ttsEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Daily Debrief</span>
           </button>
 
-          {/* Crisis Hotline Button */}
           <button
-            onClick={() => setSafetyModalOpen(true)}
-            className="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
-            title="Crisis Help / 988 Lifeline"
+            onClick={() => setActiveTab('chat')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+              activeTab === 'chat'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
           >
-            <ShieldAlert className="w-4 h-4" />
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Dialogue</span>
           </button>
 
-          {/* Clear history */}
           <button
-            onClick={clearChat}
-            className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={() => setActiveTab('history')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+              activeTab === 'history'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
           >
-            Clear
+            <History className="w-3.5 h-3.5" />
+            <span>Past Reviews ({pastReflections.length})</span>
           </button>
         </div>
       </div>
 
-      {/* Messages Thread */}
-      <div className="flex-1 overflow-y-auto bg-white/60 dark:bg-gray-900/60 rounded-2xl border border-gray-200/70 dark:border-gray-800/70 p-4 space-y-3.5 mb-3">
-        {messages.map((msg, index) => {
-          const isUser = msg.type === 'user';
-          return (
-            <div
-              key={index}
-              className={`flex items-start space-x-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
-            >
-              {!isUser && (
-                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-1">
-                  <Bot className="w-4 h-4" />
-                </div>
-              )}
+      {/* ========================================================================= */}
+      {/* TAB 1: DAILY DEBRIEF & REVIEW                                             */}
+      {/* ========================================================================= */}
+      {activeTab === 'debrief' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Debrief Input Section */}
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                  Tell FriendAI About Today
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  What happened from morning to evening? How did it feel? What drained or nourished your energy?
+                </p>
+              </div>
 
-              <div
-                className={`max-w-[82%] sm:max-w-md p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
-                  isUser
-                    ? 'bg-indigo-600 text-white rounded-tr-none shadow-xs'
-                    : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/60 text-gray-900 dark:text-gray-100 rounded-tl-none shadow-xs'
+              {/* Dictation Button */}
+              <button
+                type="button"
+                onClick={toggleSpeech}
+                className={`p-2.5 rounded-xl border transition-all ${
+                  isListening
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-transparent animate-pulse'
+                    : 'bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100'
                 }`}
+                title="Voice Dictation"
               >
-                {msg.content}
-              </div>
-
-              {isUser && (
-                <div className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center shrink-0 mt-1">
-                  <User className="w-4 h-4" />
-                </div>
-              )}
+                {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              </button>
             </div>
-          );
-        })}
 
-        {loading && (
-          <div className="flex items-center space-x-2 text-xs text-gray-400 italic py-2">
-            <Sparkles className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-            <span>FriendAI is thinking...</span>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+            {/* Expansive Textarea */}
+            <textarea
+              rows={5}
+              value={dayStory}
+              onChange={(e) => setDayStory(e.target.value)}
+              placeholder="I started my morning with... At work, something that tested my patience was... In the evening I felt... What I really wish went differently is..."
+              className="w-full bg-zinc-50/70 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100 resize-y leading-relaxed"
+            />
 
-      {/* Suggested Action Cards (One-Click Conversion) */}
-      {suggestedActions.length > 0 && (
-        <div className="bg-indigo-50/70 dark:bg-indigo-950/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 mb-3 space-y-1.5 animate-fade-in">
-          <div className="flex items-center justify-between text-[11px] font-bold text-indigo-800 dark:text-indigo-300">
-            <span>✨ One-Click Action Items from AI</span>
-            <button onClick={() => setSuggestedActions([])} className="hover:underline text-gray-400">Dismiss</button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {suggestedActions.map((suggestion, idx) => (
-              <div
-                key={idx}
-                className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs shadow-xs"
-              >
-                <span className="truncate max-w-[220px] font-medium text-gray-800 dark:text-gray-200">
-                  {suggestion}
-                </span>
-                <button
-                  onClick={() => handleConvertToAction(suggestion, 'task')}
-                  className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 hover:bg-blue-100 rounded text-[10px] font-bold"
-                  title="Add as Task"
-                >
-                  + Task
-                </button>
-                <button
-                  onClick={() => handleConvertToAction(suggestion, 'habit')}
-                  className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 rounded text-[10px] font-bold"
-                  title="Add as Habit"
-                >
-                  + Habit
-                </button>
+            {/* Quick Starters */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+                Sentence starters:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {PROMPT_STARTERS.map((starter, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setDayStory(prev => prev ? `${prev} ${starter}` : starter)}
+                    className="text-[11px] text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 px-2.5 py-1 rounded-lg transition-all text-left truncate max-w-full sm:max-w-xs"
+                  >
+                    "{starter}"
+                  </button>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <span className="text-[11px] text-zinc-400">
+                {dayStory.trim().split(/\s+/).filter(Boolean).length} words shared
+              </span>
+              <button
+                onClick={handleGenerateDayReview}
+                disabled={!dayStory.trim() || isDebriefLoading}
+                className="btn-primary flex items-center space-x-2"
+              >
+                {isDebriefLoading ? (
+                  <>
+                    <div className="w-3.5 h-3.5 loading-spinner"></div>
+                    <span>Reflecting on your day...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Generate Day Review & Reflection</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Current Review Output (Monochromatic Editorial Card) */}
+          {currentReview && (
+            <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-xs space-y-6">
+              
+              {/* Review Header & Headline */}
+              <div className="border-b border-zinc-100 dark:border-zinc-800 pb-5">
+                <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
+                  <span className="font-mono uppercase tracking-widest text-[10px]">Day in Review</span>
+                  <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                  {currentReview.headline}
+                </h2>
+                <div className="flex items-center space-x-3 mt-3">
+                  <span className="badge-mono">
+                    Estimated Mood: {currentReview.moodScore || 7}/10
+                  </span>
+                  <span className="badge-mono">
+                    Vitality: {currentReview.energyScore || 6}/10
+                  </span>
+                </div>
+              </div>
+
+              {/* The Narrative Debrief */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                  The Companion's Perspective
+                </h3>
+                <div className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-line bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 font-serif">
+                  {currentReview.narrative}
+                </div>
+              </div>
+
+              {/* Highs & Frictions Breakdown */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Highs */}
+                <div className="card-subtle space-y-2">
+                  <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">
+                    What Brought Flow & Joy
+                  </span>
+                  <ul className="space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                    {(currentReview.highlights || []).map((h, i) => (
+                      <li key={i} className="flex items-start space-x-2">
+                        <span className="text-zinc-900 dark:text-zinc-100 mt-0.5">•</span>
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Frictions */}
+                <div className="card-subtle space-y-2">
+                  <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">
+                    What Drained Energy
+                  </span>
+                  <ul className="space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                    {(currentReview.frictions || []).map((f, i) => (
+                      <li key={i} className="flex items-start space-x-2">
+                        <span className="text-zinc-400 mt-0.5">•</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Reflection Prompt & Tomorrow's Intention */}
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
+                {currentReview.reflectionPrompt && (
+                  <div className="bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 p-4 rounded-xl flex items-start space-x-3">
+                    <Moon className="w-4 h-4 mt-0.5 shrink-0 opacity-80" />
+                    <div>
+                      <p className="text-[10px] uppercase font-bold tracking-wider opacity-60">Tonight's Quiet Question</p>
+                      <p className="text-xs sm:text-sm font-medium mt-0.5">{currentReview.reflectionPrompt}</p>
+                    </div>
+                  </div>
+                )}
+
+                {currentReview.tomorrowIntention && (
+                  <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-50 dark:bg-zinc-950">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Suggested Micro-Intention For Tomorrow</p>
+                      <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">{currentReview.tomorrowIntention}</p>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <button
+                        onClick={() => handleAddActionAsTask(currentReview.tomorrowIntention)}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[11px] font-semibold flex items-center space-x-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add as Task</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
         </div>
       )}
 
-      {/* Input Message Form */}
-      <form onSubmit={handleSendMessage} className="relative flex items-center space-x-2">
-        <input
-          type="text"
-          value={textInput}
-          onChange={(e) => setTextInput(e.target.value)}
-          placeholder="Type whatever is on your mind or how your day is going..."
-          className="flex-1 py-3 pl-4 pr-12 text-xs sm:text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-xs text-gray-900 dark:text-white"
-        />
+      {/* ========================================================================= */}
+      {/* TAB 2: COMPANION DIALOGUE                                                 */}
+      {/* ========================================================================= */}
+      {activeTab === 'chat' && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col h-[650px] overflow-hidden animate-in fade-in duration-200">
+          
+          {/* Chat Control Strip */}
+          <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+            <div className="flex items-center space-x-2">
+              <Bot className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100">Companion Dialogue</span>
+              <span className="text-[10px] text-zinc-400">• Online</span>
+            </div>
 
-        {/* Mic Speech button */}
-        <button
-          type="button"
-          onClick={toggleSpeechRecognition}
-          className={`absolute right-14 p-1.5 rounded-xl transition-colors ${
-            isListening 
-              ? 'text-red-500 bg-red-50 animate-pulse' 
-              : 'text-gray-400 hover:text-indigo-600'
-          }`}
-          title="Voice input"
-        >
-          {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setTtsEnabled(!ttsEnabled)}
+                className={`p-1.5 rounded-md text-xs flex items-center space-x-1 transition-all ${
+                  ttsEnabled
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                    : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                }`}
+                title="Toggle Voice Output"
+              >
+                {ttsEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                <span className="text-[10px] font-medium hidden sm:inline">Voice</span>
+              </button>
+            </div>
+          </div>
 
-        {/* Send button */}
-        <button
-          type="submit"
-          disabled={!textInput.trim() || loading}
-          className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl disabled:opacity-40 transition-colors shadow-xs"
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </form>
+          {/* Messages Scroll Area */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            {messages.map((msg, index) => {
+              const isUser = msg.type === 'user';
+              return (
+                <div
+                  key={index}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed ${
+                      isUser
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-br-xs'
+                        : 'bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-800 rounded-bl-xs'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
 
-      {/* Disclaimer */}
-      <p className="text-[10px] text-gray-400 text-center mt-2">
-        FriendAI is an empathetic wellness companion and does not replace medical or mental healthcare.
-      </p>
+                    {/* Suggestions Action Cards */}
+                    {msg.suggestions && msg.suggestions.length > 0 && (
+                      <div className="mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/80 space-y-1.5">
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                          Suggested Next Steps
+                        </span>
+                        {msg.suggestions.map((sug, sIdx) => (
+                          <div
+                            key={sIdx}
+                            className="flex items-center justify-between text-xs bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200/80 dark:border-zinc-800"
+                          >
+                            <span className="truncate pr-2">{sug}</span>
+                            <div className="flex space-x-1 shrink-0">
+                              <button
+                                onClick={() => handleAddActionAsTask(sug)}
+                                className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-medium"
+                              >
+                                + Task
+                              </button>
+                              <button
+                                onClick={() => handleAddActionAsHabit(sug)}
+                                className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-[10px] font-medium"
+                              >
+                                + Habit
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-      <SafetyCrisisModal
-        isOpen={safetyModalOpen}
-        onClose={() => setSafetyModalOpen(false)}
+                    <span className="block text-[10px] opacity-40 mt-1.5 text-right">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {isChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-2.5 text-xs text-zinc-400 flex items-center space-x-2">
+                  <div className="w-3 h-3 loading-spinner"></div>
+                  <span>FriendAI is thinking...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Chat Input Bar */}
+          <div className="p-3.5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center space-x-2">
+            <button
+              onClick={toggleSpeech}
+              className={`p-2 rounded-xl transition-all ${
+                isListening
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 animate-pulse'
+                  : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+              }`}
+            >
+              <Mic className="w-4 h-4" />
+            </button>
+
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChatMessage()}
+              placeholder="Talk to your companion about anything..."
+              className="flex-1 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+            />
+
+            <button
+              onClick={handleSendChatMessage}
+              disabled={!chatInput.trim() || isChatLoading}
+              className="p-2.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-40 transition-all"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: PAST REVIEWS & MEMOIR ARCHIVE                                      */}
+      {/* ========================================================================= */}
+      {activeTab === 'history' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+              Life Reflections Archive
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Review your days and see how your thoughts, energy, and resilience evolved over time.
+            </p>
+          </div>
+
+          {pastReflections.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-6">
+              <BookOpen className="w-10 h-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">No previous reviews logged yet</p>
+              <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
+                Share what happened today in the "Daily Debrief" tab to generate your very first Day in Review.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {pastReflections.map((entry, idx) => {
+                const response = entry.ai_response || {};
+                return (
+                  <div
+                    key={entry.id || entry._id || idx}
+                    className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="badge-mono text-[10px]">
+                          {entry.date || new Date(entry.created_at).toISOString().split('T')[0]}
+                        </span>
+                        <span className="text-xs text-zinc-400">
+                          Mood: {entry.mood_score || response.moodScore || 7}/10
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-400">
+                        {new Date(entry.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      {entry.headline || response.headline || "Daily Reflection"}
+                    </h3>
+
+                    {/* Original Story Extract */}
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 italic line-clamp-2">
+                      "{entry.transcription}"
+                    </p>
+
+                    {/* AI Narrative */}
+                    {response.narrative && (
+                      <div className="text-xs text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950 p-3.5 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 font-serif leading-relaxed line-clamp-3">
+                        {response.narrative}
+                      </div>
+                    )}
+
+                    {/* Tomorrow Intention if present */}
+                    {response.tomorrowIntention && (
+                      <div className="flex items-center justify-between text-[11px] text-zinc-600 dark:text-zinc-400 pt-1">
+                        <span>Intention: <strong>{response.tomorrowIntention}</strong></span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Safety modal */}
+      <SafetyCrisisModal 
+        isOpen={safetyModalOpen} 
+        onClose={() => setSafetyModalOpen(false)} 
       />
+
     </div>
   );
 };

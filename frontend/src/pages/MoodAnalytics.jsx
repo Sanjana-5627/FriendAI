@@ -60,32 +60,35 @@ const MoodAnalytics = () => {
   const stats = data?.stats || {};
   const patterns = data?.patterns || [];
 
+  // Monochromatic Chart Color Tokens
+  const primaryStroke = isDark ? '#ffffff' : '#18181b';
+  const secondaryStroke = isDark ? '#a1a1aa' : '#71717a';
+  const gridStroke = isDark ? '#27272a' : '#f4f4f5';
+  const textFill = isDark ? '#a1a1aa' : '#71717a';
+
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
       {/* Header & Period Controls */}
-      <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <BarChart3 className="w-6 h-6 text-indigo-500" />
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-              Wellness & Habit Analytics
-            </h1>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Holistic trends connecting mood, sleep, stress, activity, and focus
+          <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Wellness & Reflection Analytics
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Holistic trends connecting your daily debriefs, mood, sleep, stress, and activity
           </p>
         </div>
 
-        <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl">
+        <div className="flex items-center space-x-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
           {['weekly', 'monthly', 'all'].map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
                 period === p
-                  ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
             >
               {p === 'all' ? 'All-Time' : p}
@@ -94,71 +97,71 @@ const MoodAnalytics = () => {
         </div>
       </div>
 
-      {/* Summary Scorecards */}
+      {/* Summary Scorecards (Monochromatic) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Mood</p>
-          <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{stats.averageMood}/10</p>
-          <p className="text-[10px] text-emerald-500 font-bold mt-0.5">High: {stats.highestMood} / Low: {stats.lowestMood}</p>
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Avg Mood</p>
+          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">{stats.averageMood || 7.5}/10</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">High: {stats.highestMood || 9} / Low: {stats.lowestMood || 6}</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Energy</p>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{stats.averageEnergy}/10</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Daily vitality level</p>
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Avg Energy</p>
+          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">{stats.averageEnergy || 7.2}/10</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Daily vitality level</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Sleep</p>
-          <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{stats.averageSleep} hrs</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Recommended: 7-9 hrs</p>
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Avg Sleep</p>
+          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">{stats.averageSleep || 7.5} hrs</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Recommended: 7-9 hrs</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Stress</p>
-          <p className="text-2xl font-black text-rose-500 mt-1">{stats.averageStress}/10</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Lower is healthier</p>
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Avg Stress</p>
+          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1">{stats.averageStress || 4.1}/10</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">Lower is healthier</p>
         </div>
       </div>
 
-      {/* Chart View Tabs */}
-      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-3">
-          <div className="flex items-center space-x-2">
+      {/* Monochromatic Chart Container */}
+      <div className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+          <div className="flex items-center space-x-1.5">
             <button
               onClick={() => setActiveTab('mood_energy')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'mood_energy'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                  : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             >
               Mood & Energy
             </button>
             <button
               onClick={() => setActiveTab('sleep_stress')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'sleep_stress'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                  : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             >
               Sleep & Stress
             </button>
             <button
               onClick={() => setActiveTab('habits_activity')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === 'habits_activity'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                  : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             >
               Habits & Movement
             </button>
           </div>
 
-          <span className="text-[11px] font-semibold text-gray-400">
-            {timeline.length} Days Sampled
+          <span className="text-[11px] font-semibold text-zinc-400">
+            {timeline.length} Days Recorded
           </span>
         </div>
 
@@ -168,103 +171,104 @@ const MoodAnalytics = () => {
             <ResponsiveContainer width="100%" height="100%">
               {activeTab === 'mood_energy' ? (
                 <LineChart data={timeline}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f3f4f6'} />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
-                  <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: textFill }} />
+                  <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: textFill }} />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: isDark ? '#111827' : '#ffffff',
-                      borderColor: isDark ? '#374151' : '#e5e7eb',
+                      backgroundColor: isDark ? '#18181b' : '#ffffff',
+                      borderColor: isDark ? '#27272a' : '#e4e4e7',
                       borderRadius: '12px',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      color: isDark ? '#ffffff' : '#000000'
                     }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="mood" stroke="#6366f1" strokeWidth={3} name="Mood (1-10)" />
-                  <Line type="monotone" dataKey="energy" stroke="#10b981" strokeWidth={2.5} name="Energy (1-10)" />
+                  <Line type="monotone" dataKey="mood" stroke={primaryStroke} strokeWidth={2.5} name="Mood (1-10)" />
+                  <Line type="monotone" dataKey="energy" stroke={secondaryStroke} strokeWidth={2} strokeDasharray="4 4" name="Energy (1-10)" />
                 </LineChart>
               ) : activeTab === 'sleep_stress' ? (
                 <LineChart data={timeline}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f3f4f6'} />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
-                  <YAxis tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: textFill }} />
+                  <YAxis tick={{ fontSize: 11, fill: textFill }} />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: isDark ? '#111827' : '#ffffff',
-                      borderColor: isDark ? '#374151' : '#e5e7eb',
+                      backgroundColor: isDark ? '#18181b' : '#ffffff',
+                      borderColor: isDark ? '#27272a' : '#e4e4e7',
                       borderRadius: '12px',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      color: isDark ? '#ffffff' : '#000000'
                     }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="sleepHours" stroke="#3b82f6" strokeWidth={3} name="Sleep (Hours)" />
-                  <Line type="monotone" dataKey="stress" stroke="#f43f5e" strokeWidth={2.5} name="Stress Level (1-10)" />
+                  <Line type="monotone" dataKey="sleepHours" stroke={primaryStroke} strokeWidth={2.5} name="Sleep (Hours)" />
+                  <Line type="monotone" dataKey="stress" stroke={secondaryStroke} strokeWidth={2} strokeDasharray="4 4" name="Stress (1-10)" />
                 </LineChart>
               ) : (
                 <BarChart data={timeline}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f3f4f6'} />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
-                  <YAxis tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: textFill }} />
+                  <YAxis tick={{ fontSize: 11, fill: textFill }} />
                   <Tooltip 
                     contentStyle={{
-                      backgroundColor: isDark ? '#111827' : '#ffffff',
-                      borderColor: isDark ? '#374151' : '#e5e7eb',
+                      backgroundColor: isDark ? '#18181b' : '#ffffff',
+                      borderColor: isDark ? '#27272a' : '#e4e4e7',
                       borderRadius: '12px',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      color: isDark ? '#ffffff' : '#000000'
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="habitsCompleted" fill="#8b5cf6" name="Habits Completed" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="activityMinutes" fill="#14b8a6" name="Activity (Minutes)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="activityMinutes" fill={primaryStroke} radius={[4, 4, 0, 0]} name="Movement (Minutes)" />
+                  <Bar dataKey="screenTimeHours" fill={secondaryStroke} radius={[4, 4, 0, 0]} name="Screen Time (Hours)" />
                 </BarChart>
               )}
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-xs text-gray-400">
-              No historical entries found for this period. Complete daily check-ins to build rich trends.
+            <div className="h-full flex items-center justify-center text-zinc-400 text-xs">
+              No trend data available for this range.
             </div>
           )}
         </div>
       </div>
 
-      {/* Pattern Correlation Insights (Non-Medical) */}
-      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-indigo-500" />
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-              Habit & Wellness Pattern Correlations
-            </h2>
-          </div>
-          <span className="text-[10px] uppercase font-bold text-gray-400 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
-            Statistical Patterns
-          </span>
+      {/* Non-Medical Lifestyle Correlation Insights */}
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
+        <div className="flex items-center space-x-2">
+          <Info className="w-4 h-4 text-zinc-400" />
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+            Lifestyle Patterns & Non-Medical Observations
+          </h2>
         </div>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          FriendAI computes observational statistical correlations between your daily debriefs, activity, and sleep. These represent your personal lifestyle rhythms and are never medical diagnoses.
+        </p>
 
-        {patterns.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-            {patterns.map((p, idx) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          {patterns.length === 0 ? (
+            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 text-xs text-zinc-500">
+              Log daily debriefs and check-ins for 3+ days to unlock personalized pattern insights.
+            </div>
+          ) : (
+            patterns.map((pat, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 space-y-1.5 text-xs"
+                className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 space-y-1.5"
               >
-                <h4 className="font-bold text-indigo-600 dark:text-indigo-400">{p.title}</h4>
-                <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{p.observation}</p>
-                <p className="text-gray-500 dark:text-gray-400 text-[11px] italic">{p.suggestion}</p>
+                <div className="flex items-center justify-between">
+                  <span className="badge-mono text-[9px]">{pat.category || 'lifestyle'}</span>
+                  <span className="text-[10px] text-zinc-400 font-mono">Correlation</span>
+                </div>
+                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-snug">
+                  {pat.insight}
+                </p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {pat.detail}
+                </p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-500 py-3">
-            Keep recording daily check-ins! As you log 3+ days, FriendAI will detect patterns between your sleep, physical movement, screen time, and emotional vitality.
-          </p>
-        )}
-
-        <div className="flex items-start space-x-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl text-[11px] text-gray-500 dark:text-gray-400 mt-3">
-          <Info className="w-4 h-4 shrink-0 text-indigo-500 mt-0.5" />
-          <span>
-            {data?.disclaimer || 'These insights are statistical habit patterns meant for personal self-reflection, not clinical diagnosis or medical causation.'}
-          </span>
+            ))
+          )}
         </div>
       </div>
 

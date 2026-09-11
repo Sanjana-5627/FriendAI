@@ -7,8 +7,6 @@ import {
   Trash2, 
   Circle, 
   CheckCircle2, 
-  AlertCircle, 
-  Filter, 
   Tag, 
   Target
 } from 'lucide-react';
@@ -65,7 +63,7 @@ const Tasks = () => {
         ...newTask,
         goal_id: newTask.goal_id || null
       });
-      toast.success('Task created successfully');
+      toast.success('Task created');
       setNewTask({
         title: '',
         description: '',
@@ -98,171 +96,130 @@ const Tasks = () => {
 
     try {
       await apiHelpers.deleteTask(id);
-      toast.success('Task deleted');
+      toast.success('Task removed');
       fetchTasksAndGoals();
     } catch (error) {
       toast.error('Failed to delete task');
     }
   };
 
-  const filteredTasks = tasks.filter(task => {
-    if (filterStatus === 'active' && task.completed) return false;
-    if (filterStatus === 'completed' && !task.completed) return false;
-    if (filterCategory !== 'all' && task.category !== filterCategory) return false;
+  const filteredTasks = tasks.filter((t) => {
+    if (filterStatus === 'active' && t.completed) return false;
+    if (filterStatus === 'completed' && !t.completed) return false;
+    if (filterCategory !== 'all' && (t.category || 'personal') !== filterCategory) return false;
     return true;
   });
 
-  const getPriorityBadge = (priority) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200';
-      case 'high':
-        return 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200';
-      case 'low':
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200';
-      default:
-        return 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200';
-    }
-  };
+  const pendingCount = tasks.filter(t => !t.completed).length;
+  const completedCount = tasks.filter(t => t.completed).length;
 
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Monochromatic Header */}
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <CheckSquare className="w-6 h-6 text-indigo-500" />
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-              Actionable Tasks
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Prioritize your day, connect tasks to long-term goals, and maintain clarity
+          <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase block mb-1">
+            Focus & Execution
+          </span>
+          <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Tasks & Priorities
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+            {pendingCount} pending • {completedCount} completed
           </p>
         </div>
 
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1.5 transition-all self-start sm:self-auto"
+          className="btn-primary flex items-center space-x-2"
         >
           <Plus className="w-4 h-4" />
-          <span>{showAddForm ? 'Cancel' : 'New Task'}</span>
+          <span>{showAddForm ? 'Close Form' : 'New Task'}</span>
         </button>
       </div>
 
       {/* Add Task Form */}
       {showAddForm && (
-        <form onSubmit={handleAddTask} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-lg space-y-4 animate-fade-in text-xs">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Create New Task</h3>
+        <form onSubmit={handleAddTask} className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Create Task</h3>
           
-          <div>
-            <label className="font-semibold block mb-1">Task Title</label>
+          <div className="space-y-3">
             <input
               type="text"
-              placeholder="What needs to be done?"
+              placeholder="Task title (e.g. Schedule health checkup)"
               value={newTask.title}
-              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+              className="input-field"
               required
             />
-          </div>
 
-          <div>
-            <label className="font-semibold block mb-1">Description (Optional)</label>
             <textarea
-              rows={2}
-              placeholder="Add key details or links..."
+              placeholder="Optional notes or instructions..."
               value={newTask.description}
-              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+              className="input-field h-16 resize-none"
             />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div>
-              <label className="font-semibold block mb-1">Priority</label>
-              <select
-                value={newTask.priority}
-                onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Priority</label>
+                <select
+                  value={newTask.priority}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, priority: e.target.value }))}
+                  className="input-field"
+                >
+                  <option value="low">Low Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="high">High Priority</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="font-semibold block mb-1">Category</label>
-              <select
-                value={newTask.category}
-                onChange={(e) => setNewTask({ ...newTask, category: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
-              >
-                <option value="personal">Personal</option>
-                <option value="work">Work</option>
-                <option value="study">Study</option>
-                <option value="wellness">Wellness</option>
-                <option value="chores">Chores</option>
-              </select>
-            </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Category</label>
+                <select
+                  value={newTask.category}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, category: e.target.value }))}
+                  className="input-field"
+                >
+                  <option value="personal">Personal</option>
+                  <option value="work">Work</option>
+                  <option value="wellness">Wellness</option>
+                  <option value="social">Social</option>
+                  <option value="chores">Chores</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="font-semibold block mb-1">Due Date</label>
-              <input
-                type="date"
-                value={newTask.due_date}
-                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold block mb-1">Link to Goal (Optional)</label>
-              <select
-                value={newTask.goal_id}
-                onChange={(e) => setNewTask({ ...newTask, goal_id: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
-              >
-                <option value="">No goal linked</option>
-                {goals.map(g => (
-                  <option key={g._id || g.id} value={g._id || g.id}>{g.title}</option>
-                ))}
-              </select>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Due Date</label>
+                <input
+                  type="date"
+                  value={newTask.due_date}
+                  onChange={(e) => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
+                  className="input-field"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 text-gray-500 rounded-xl hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
-            >
-              Save Task
-            </button>
+          <div className="flex space-x-2 pt-2">
+            <button type="submit" className="btn-primary">Save Task</button>
+            <button type="button" onClick={() => setShowAddForm(false)} className="btn-secondary">Cancel</button>
           </div>
         </form>
       )}
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs text-xs">
         <div className="flex items-center space-x-1.5">
           {['active', 'completed', 'all'].map((st) => (
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-3 py-1.5 rounded-xl font-bold capitalize transition-colors ${
+              className={`px-3 py-1.5 rounded-lg font-semibold capitalize transition-all ${
                 filterStatus === st
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
+                  : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
             >
               {st}
@@ -271,17 +228,17 @@ const Tasks = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <span className="text-gray-400">Category:</span>
+          <span className="text-zinc-400 text-[11px]">Category:</span>
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-2 py-1 bg-gray-50 dark:bg-gray-800 border rounded-xl font-medium"
+            className="px-2.5 py-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs"
           >
-            <option value="all">All Categories</option>
+            <option value="all">All</option>
             <option value="personal">Personal</option>
             <option value="work">Work</option>
-            <option value="study">Study</option>
             <option value="wellness">Wellness</option>
+            <option value="social">Social</option>
             <option value="chores">Chores</option>
           </select>
         </div>
@@ -291,81 +248,66 @@ const Tasks = () => {
       {loading ? (
         <LoadingSpinner text="Loading tasks..." />
       ) : filteredTasks.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
-          <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">No tasks in this view</p>
-          <p className="text-xs text-gray-400 mt-1">Add a task or change your filter selection.</p>
+        <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-8">
+          <CheckSquare className="w-10 h-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">No tasks in this view</p>
+          <p className="text-xs text-zinc-400 mt-1">Add a task or adjust your filter selection.</p>
         </div>
       ) : (
         <div className="space-y-2.5">
           {filteredTasks.map((task) => {
             const id = task._id || task.id;
             const isDone = task.completed;
-            const isOverdue = task.isOverdue;
 
             return (
               <div
                 key={id}
-                className={`p-4 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                className={`p-4 rounded-xl border transition-all flex items-center justify-between gap-3 ${
                   isDone 
-                    ? 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-60'
-                    : isOverdue
-                    ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60'
-                    : 'bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 shadow-xs hover:border-indigo-200'
+                    ? 'bg-zinc-50/60 dark:bg-zinc-900/30 border-zinc-200/60 dark:border-zinc-800/60 opacity-60'
+                    : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 shadow-xs'
                 }`}
               >
-                <div className="flex items-start space-x-3.5 flex-1 min-w-0">
+                <div className="flex items-center space-x-3.5 flex-1 min-w-0">
                   <button
                     onClick={() => handleToggleTask(task)}
-                    className="mt-0.5 text-gray-400 hover:text-indigo-600 transition-colors shrink-0"
+                    className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors shrink-0"
                   >
                     {isDone ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      <CheckCircle2 className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
                     ) : (
                       <Circle className="w-5 h-5" />
                     )}
                   </button>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getPriorityBadge(task.priority)}`}>
-                        {task.priority}
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs sm:text-sm font-medium truncate ${
+                        isDone ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'
+                      }`}>
+                        {task.title}
                       </span>
-                      <span className="text-[11px] font-medium text-gray-400 capitalize">
-                        • {task.category}
+                      <span className="badge-mono text-[9px]">
+                        {task.priority || 'medium'}
                       </span>
-                      {isOverdue && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white">
-                          Overdue
-                        </span>
-                      )}
+                      <span className="text-[10px] text-zinc-400 font-mono">
+                        {task.category}
+                      </span>
                     </div>
 
-                    <h3 className={`text-sm font-bold mt-1 text-gray-900 dark:text-white ${isDone ? 'line-through text-gray-400' : ''}`}>
-                      {task.title}
-                    </h3>
-
                     {task.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
                         {task.description}
                       </p>
-                    )}
-
-                    {task.due_date && (
-                      <div className="flex items-center space-x-1 text-[11px] text-gray-400 mt-2">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                      </div>
                     )}
                   </div>
                 </div>
 
                 <button
                   onClick={() => handleDeleteTask(task)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  title="Delete task"
+                  className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 p-1 rounded transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             );

@@ -60,6 +60,8 @@ export const apiHelpers = {
 
   // AI Companion & Journaling
   chat: (message, history = []) => api.post('/api/ai/chat', { message, history }),
+  generateDayReview: (text, date) => api.post('/api/ai/day-review', { text, date }),
+  getReflections: () => api.get('/api/ai/reflections'),
   analyzeText: (transcription, context = {}) => api.post('/api/ai/analyze', { transcription, context }),
   breakdownGoal: (title, category) => api.post('/api/ai/breakdown-goal', { title, category }),
   transcribeAudio: (audioBlob) => {

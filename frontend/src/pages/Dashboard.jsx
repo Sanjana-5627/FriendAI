@@ -1,37 +1,47 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiHelpers } from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import CheckInModal from '../components/CheckInModal';
 import { 
   Sparkles, 
-  Flame, 
-  Heart, 
-  Target, 
-  Zap, 
-  CheckSquare, 
   Calendar, 
   ArrowRight, 
   Compass, 
   Clock, 
-  Users, 
-  AlertCircle,
-  TrendingUp,
-  CheckCircle2,
-  Circle
+  CheckCircle2, 
+  Circle,
+  BookOpen,
+  MessageSquare,
+  Moon,
+  Zap,
+  CheckSquare,
+  Flame
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
+  const [latestReflection, setLatestReflection] = useState(null);
 
   const fetchDashboard = async () => {
     try {
       setLoading(true);
       const res = await apiHelpers.getDashboard();
       setData(res.data);
+
+      // Also check latest reflection
+      try {
+        const refRes = await apiHelpers.getReflections();
+        if (refRes.data && refRes.data.length > 0) {
+          setLatestReflection(refRes.data[0]);
+        }
+      } catch (e) {
+        // silent catch
+      }
     } catch (error) {
       console.error('Dashboard fetch error:', error);
       toast.error('Failed to refresh dashboard');
@@ -46,7 +56,7 @@ const Dashboard = () => {
 
   const handleToggleHabit = async (habitId, habitName, isCompleted) => {
     if (isCompleted) {
-      toast('Habit already recorded for today! Keep up the streak.', { icon: '✨' });
+      toast('Habit already recorded for today! Streak active.', { icon: '✓' });
       return;
     }
     try {
@@ -61,7 +71,7 @@ const Dashboard = () => {
   const handleToggleTask = async (taskId, currentStatus) => {
     try {
       await apiHelpers.updateTask(taskId, { completed: !currentStatus });
-      toast.success(!currentStatus ? 'Task completed!' : 'Task uncompleted');
+      toast.success(!currentStatus ? 'Task completed' : 'Task uncompleted');
       fetchDashboard();
     } catch (error) {
       toast.error('Failed to update task');
@@ -69,12 +79,15 @@ const Dashboard = () => {
   };
 
   if (loading && !data) {
-    return <LoadingSpinner text="Assembling your personalized wellness dashboard..." />;
+    return <LoadingSpinner text="Assembling your companion dashboard..." />;
   }
 
   const wellnessScore = data?.wellnessScore || { total: 75, breakdown: {} };
   const stats = data?.stats || {};
-  const socialHealth = data?.socialHealth || { level: 'Good', color: 'emerald', message: '' };
+  const habits = data?.habits || [];
+  const tasks = data?.tasks || [];
+  const timetable = data?.timetable?.items || [];
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -85,383 +98,305 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 px-3 sm:px-6 lg:px-8 py-5 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto space-y-6">
       
-      {/* 1. Welcome & Greeting Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+      {/* 1. Monochromatic Editorial Header */}
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <span className="text-xl sm:text-2xl">🌱</span>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              {getGreeting()}, {data?.greetingName || 'Friend'}
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            "Consistency beats intensity. One small mindful action changes your whole trajectory."
+          <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase block mb-1">
+            {today}
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            {getGreeting()}, {data?.greetingName || 'Friend'}
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            Your personal space to reflect on your day, build steady routines, and stay grounded.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           {!data?.todayCheckInCompleted ? (
             <button
               onClick={() => setCheckInModalOpen(true)}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center space-x-2"
+              className="btn-primary flex items-center space-x-2"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Complete Daily Check-In</span>
+              <span>Quick Check-In</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : (
             <button
               onClick={() => setCheckInModalOpen(true)}
-              className="px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-1.5"
+              className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-semibold flex items-center space-x-1.5"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Checked in today ({data?.todayCheckIn?.mood}/10)</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* 2. Hero Centerpiece: THE DAILY DEBRIEF & REFLECTION CARD */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-xs overflow-hidden">
+        <div className="p-6 sm:p-7 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                Evening Reflection & Day in Review
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                The heart of FriendAI: Tell your companion how today went, and get an honest, thoughtful review.
+              </p>
+            </div>
+          </div>
 
           <Link
             to="/chat"
-            className="px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+            className="btn-secondary flex items-center space-x-1.5 text-xs self-start sm:self-auto shrink-0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-            <span>Chat Friend</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* 2. Top Metric Cards: Wellness Score, Streak, Mood, Social Indicator */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        
-        {/* Wellness Score Card */}
-        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-            <span>Wellness Score</span>
-            <Sparkles className="w-4 h-4 text-indigo-500" />
-          </div>
-          <div className="my-2 flex items-baseline space-x-2">
-            <span className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400">
-              {wellnessScore.total}
-            </span>
-            <span className="text-xs text-gray-400 font-medium">/100</span>
-          </div>
-          <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-indigo-500 to-teal-400 h-full rounded-full transition-all duration-500"
-              style={{ width: `${wellnessScore.total}%` }}
-            ></div>
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2 truncate">
-            Mood, sleep, habits & connection
-          </p>
-        </div>
-
-        {/* Streak Card */}
-        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-            <span>Check-in Streak</span>
-            <Flame className="w-4 h-4 text-orange-500" />
-          </div>
-          <div className="my-2 flex items-baseline space-x-2">
-            <span className="text-3xl sm:text-4xl font-black text-orange-500">
-              {stats.currentStreak || 0}
-            </span>
-            <span className="text-xs text-gray-400 font-medium">consecutive days</span>
-          </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            {stats.currentStreak >= 3 ? '🔥 Building incredible momentum!' : 'Check in daily to build your streak.'}
-          </p>
-        </div>
-
-        {/* Average Mood Card */}
-        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-            <span>Recent Average Mood</span>
-            <Heart className="w-4 h-4 text-rose-500" />
-          </div>
-          <div className="my-2 flex items-baseline space-x-2">
-            <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
-              {stats.averageMood || 7}
-            </span>
-            <span className="text-xs text-gray-400 font-medium">/ 10</span>
-          </div>
-          <Link to="/mood" className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center space-x-1 hover:underline">
-            <span>View 7-day trend</span>
-            <ArrowRight className="w-3 h-3" />
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Open Companion</span>
           </Link>
         </div>
 
-        {/* Anti-Loneliness / Social Health */}
-        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-            <span>Connection Health</span>
-            <Users className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="my-2 flex items-center space-x-2">
-            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-              socialHealth.level === 'Good' 
-                ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
-                : 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
-            }`}>
-              {socialHealth.level}
-            </span>
-          </div>
-          <Link to="/explore" className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 flex items-center space-x-1 hover:underline">
-            <span>Connect & Explore</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-
-      </div>
-
-      {/* 3. Main Dashboard Grid (2 columns: Left = Schedule & Tasks; Right = Habits, Goals, Insights) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* LEFT COLUMN: 7 Cols */}
-        <div className="lg:col-span-7 space-y-5">
-          
-          {/* Today's Schedule Preview */}
-          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-indigo-500" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Today's Balanced Timetable</h3>
+        <div className="p-6 sm:p-7">
+          {latestReflection ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2 text-xs text-zinc-400">
+                <span className="badge-mono text-[10px]">
+                  {latestReflection.date || new Date(latestReflection.created_at).toISOString().split('T')[0]}
+                </span>
+                <span>• Latest Review</span>
               </div>
-              <Link to="/planner" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                Full Day View →
-              </Link>
-            </div>
 
-            {data?.todaySchedule && data.todaySchedule.length > 0 ? (
-              <div className="space-y-2.5">
-                {data.todaySchedule.map((item) => (
-                  <div 
-                    key={item.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-colors ${
-                      item.completed 
-                        ? 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-800 line-through text-gray-400'
-                        : 'bg-gray-50/70 dark:bg-gray-800/60 border-gray-200/70 dark:border-gray-700/60 text-gray-800 dark:text-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-[11px] bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md">
-                        {item.time}
-                      </span>
-                      <span className="font-medium truncate max-w-[240px] sm:max-w-md">{item.title}</span>
-                    </div>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800">
-                      {item.category}
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                {latestReflection.headline || latestReflection.ai_response?.headline || "A Day of Quiet Persistence"}
+              </h3>
+
+              <div className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-serif bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60">
+                {latestReflection.ai_response?.narrative || latestReflection.transcription}
+              </div>
+
+              {latestReflection.ai_response?.reflectionPrompt && (
+                <div className="bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 p-4 rounded-xl flex items-start space-x-3">
+                  <Moon className="w-4 h-4 mt-0.5 shrink-0 opacity-80" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold tracking-wider opacity-60">Tonight's Reflection</p>
+                    <p className="text-xs sm:text-sm font-medium mt-0.5">{latestReflection.ai_response.reflectionPrompt}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] text-zinc-400">
+                  Ready to add more or talk?
+                </span>
+                <Link
+                  to="/chat"
+                  className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline flex items-center space-x-1"
+                >
+                  <span>Debrief more with FriendAI</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 space-y-3">
+              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                You haven't told FriendAI about your day yet.
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
+                Take two minutes to talk about what happened today—what challenged you, what gave you relief, and how you feel right now. FriendAI will generate your personalized Day in Review.
+              </p>
+              <div className="pt-2">
+                <Link
+                  to="/chat"
+                  className="btn-primary inline-flex items-center space-x-2"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Start Your Day Debrief</span>
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Metrics Summary Strip (Minimalist & Monochromatic) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Wellness Score</span>
+          <div className="flex items-baseline space-x-1 mt-1">
+            <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{wellnessScore.total}</span>
+            <span className="text-xs text-zinc-400">/100</span>
+          </div>
+          <span className="text-[10px] text-zinc-400 mt-1 block">Calculated holistic health</span>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Active Habit Streak</span>
+          <div className="flex items-baseline space-x-1 mt-1">
+            <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{stats.activeStreak || 6}</span>
+            <span className="text-xs text-zinc-400">days</span>
+          </div>
+          <span className="text-[10px] text-zinc-400 mt-1 block">Best current continuity</span>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Pending Tasks</span>
+          <div className="flex items-baseline space-x-1 mt-1">
+            <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{stats.pendingTasks || tasks.filter(t => !t.completed).length}</span>
+            <span className="text-xs text-zinc-400">items</span>
+          </div>
+          <span className="text-[10px] text-zinc-400 mt-1 block">Priority focus for today</span>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block">Recent Mood</span>
+          <div className="flex items-baseline space-x-1 mt-1">
+            <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">{data?.todayCheckIn?.mood || stats.latestMood || 8}</span>
+            <span className="text-xs text-zinc-400">/10</span>
+          </div>
+          <span className="text-[10px] text-zinc-400 mt-1 block">Vitality & emotional state</span>
+        </div>
+      </div>
+
+      {/* 4. Two-Column Core: Timetable & Habits/Tasks */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Left: Today's Timetable */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Today's Daily Timetable</h3>
+            </div>
+            <Link to="/planner" className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium">
+              View Schedule →
+            </Link>
+          </div>
+
+          {timetable.length === 0 ? (
+            <div className="text-center py-8 text-zinc-400 text-xs">
+              No schedule generated for today yet.
+              <div className="mt-2">
+                <Link to="/planner" className="btn-secondary text-xs">Generate Timetable</Link>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {timetable.slice(0, 5).map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800 text-xs"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="font-mono text-[11px] text-zinc-400 w-24 shrink-0">
+                      {item.startTime} - {item.endTime}
+                    </span>
+                    <span className={`font-medium ${item.completed ? 'line-through text-zinc-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                      {item.title}
                     </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-xs text-gray-400">
-                No timetable scheduled for today. <Link to="/planner" className="text-indigo-500 font-semibold underline">Generate one</Link>
-              </div>
-            )}
-          </div>
-
-          {/* Pending Tasks & Overdue Warnings */}
-          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <CheckSquare className="w-4 h-4 text-blue-500" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Priority Tasks</h3>
-              </div>
-              <Link to="/tasks" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                Manage All ({stats.pendingTasksCount || 0}) →
-              </Link>
-            </div>
-
-            {data?.upcomingTasks && data.upcomingTasks.length > 0 ? (
-              <div className="space-y-2">
-                {data.upcomingTasks.map((task) => {
-                  const id = task._id || task.id;
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 text-xs"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={() => handleToggleTask(id, task.completed)}
-                          className="text-gray-400 hover:text-indigo-600 transition-colors"
-                        >
-                          <Circle className="w-4 h-4" />
-                        </button>
-                        <span className="font-medium text-gray-800 dark:text-gray-200">{task.title}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {task.priority === 'high' || task.priority === 'urgent' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
-                            {task.priority}
-                          </span>
-                        ) : null}
-                        <span className="text-[10px] text-gray-400 capitalize">{task.category}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 py-4 text-center">
-                All tasks are cleared! Take time to breathe or <Link to="/tasks" className="text-indigo-500 underline">add a new task</Link>.
-              </p>
-            )}
-          </div>
-
-          {/* AI Personalized Recommendations Card */}
-          {data?.recommendations && data.recommendations.length > 0 && (
-            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 shadow-xs">
-              <div className="flex items-center space-x-2 mb-3">
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Personalized Wellness Suggestion</h3>
-              </div>
-              <div className="space-y-3">
-                {data.recommendations.map((rec, i) => (
-                  <div key={i} className="p-3.5 bg-white/80 dark:bg-gray-900/80 rounded-xl border border-indigo-100 dark:border-indigo-900/30 text-xs">
-                    <h4 className="font-bold text-gray-900 dark:text-white mb-1">{rec.title}</h4>
-                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{rec.description}</p>
-                    <div className="mt-2.5 flex justify-end">
-                      <Link
-                        to="/explore"
-                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-                      >
-                        Explore Activity Options →
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  <span className="badge-mono text-[9px]">
+                    {item.category}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
-
         </div>
 
-        {/* RIGHT COLUMN: 5 Cols */}
-        <div className="lg:col-span-5 space-y-5">
-          
-          {/* Habits For Today Checklist */}
-          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Daily Habits</h3>
-              </div>
-              <span className="text-xs font-semibold text-gray-500">
-                {stats.habitsCompletedToday || 0}/{stats.activeHabitsCount || 0} Done
-              </span>
+        {/* Right: Today's Habits & Tasks */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+            <div className="flex items-center space-x-2">
+              <Zap className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Habits & Priorities</h3>
             </div>
-
-            {data?.todayHabits && data.todayHabits.length > 0 ? (
-              <div className="space-y-2">
-                {data.todayHabits.map((habit) => {
-                  const id = habit._id || habit.id;
-                  const isDone = (habit.completions || []).some(
-                    c => new Date(c.date).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
-                  );
-                  return (
-                    <div
-                      key={id}
-                      onClick={() => handleToggleHabit(id, habit.name, isDone)}
-                      className={`flex items-center justify-between p-3 rounded-xl border text-xs cursor-pointer transition-all ${
-                        isDone
-                          ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
-                          : 'bg-gray-50/70 dark:bg-gray-800/60 border-gray-200/70 dark:border-gray-700/60 hover:border-indigo-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {isDone ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                        ) : (
-                          <Circle className="w-4 h-4 text-gray-400" />
-                        )}
-                        <span className={`font-medium ${isDone ? 'text-emerald-900 dark:text-emerald-200' : 'text-gray-800 dark:text-gray-200'}`}>
-                          {habit.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                        <Flame className="w-3.5 h-3.5" />
-                        <span>{habit.streak?.current || 0}d</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 py-4 text-center">
-                No habits set yet. <Link to="/habits" className="text-indigo-500 underline font-semibold">Create one</Link>
-              </p>
-            )}
+            <Link to="/habits" className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium">
+              Manage All →
+            </Link>
           </div>
 
-          {/* Active Goals Progress */}
-          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Target className="w-4 h-4 text-purple-500" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Active Goals</h3>
-              </div>
-              <Link to="/goals" className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline">
-                View All →
-              </Link>
-            </div>
-
-            {data?.activeGoals && data.activeGoals.length > 0 ? (
-              <div className="space-y-3">
-                {data.activeGoals.map((goal) => (
-                  <div key={goal._id || goal.id} className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60">
-                    <div className="flex justify-between items-center text-xs mb-1.5">
-                      <span className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[200px]">{goal.title}</span>
-                      <span className="font-bold text-purple-600 dark:text-purple-400">{goal.progress || 0}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
-                      <div 
-                        className="bg-purple-600 h-full rounded-full transition-all duration-300"
-                        style={{ width: `${goal.progress || 0}%` }}
-                      ></div>
-                    </div>
+          <div className="space-y-2.5">
+            {habits.slice(0, 4).map((habit) => {
+              const completed = habit.completedToday;
+              return (
+                <div
+                  key={habit.id || habit._id}
+                  onClick={() => handleToggleHabit(habit.id || habit._id, habit.name, completed)}
+                  className={`flex items-center justify-between p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                    completed
+                      ? 'bg-zinc-100/70 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700'
+                      : 'bg-zinc-50 dark:bg-zinc-950 border-zinc-200/60 dark:border-zinc-800 hover:border-zinc-400'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    {completed ? (
+                      <CheckCircle2 className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-zinc-400" />
+                    )}
+                    <span className={`font-medium ${completed ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                      {habit.name}
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 py-3 text-center">
-                No active goals. <Link to="/goals" className="text-purple-500 underline font-semibold">Set a meaningful goal</Link>
-              </p>
-            )}
+                  <div className="flex items-center space-x-1 text-zinc-400 font-mono text-[11px]">
+                    <Flame className="w-3.5 h-3.5" />
+                    <span>{habit.streak?.current || 0}d</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* AI Insights & Observations */}
-          {data?.insights && data.insights.length > 0 && (
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
-                <span>💡</span>
-                <span>Habit Insights</span>
-              </h3>
-              <div className="space-y-2.5">
-                {data.insights.map((insight, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-xs">
-                    <div className="flex items-center space-x-2 font-bold text-gray-900 dark:text-white mb-0.5">
-                      <span>{insight.icon}</span>
-                      <span>{insight.title}</span>
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed mt-1">{insight.message}</p>
-                  </div>
-                ))}
-              </div>
+          {/* Quick Tasks Strip */}
+          <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
+              <span className="font-semibold uppercase tracking-wider text-[10px]">Today's Focus Tasks</span>
+              <Link to="/tasks" className="hover:underline">All Tasks</Link>
             </div>
-          )}
-
+            <div className="space-y-1.5">
+              {tasks.slice(0, 3).map((task) => (
+                <div
+                  key={task.id || task._id}
+                  onClick={() => handleToggleTask(task.id || task._id, task.completed)}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-xs cursor-pointer"
+                >
+                  <div className="flex items-center space-x-2">
+                    {task.completed ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
+                    ) : (
+                      <Circle className="w-3.5 h-3.5 text-zinc-400" />
+                    )}
+                    <span className={`truncate ${task.completed ? 'line-through text-zinc-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                      {task.title}
+                    </span>
+                  </div>
+                  <span className="badge-mono text-[9px]">
+                    {task.priority || 'medium'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
       </div>
 
-      <CheckInModal
-        isOpen={checkInModalOpen}
-        onClose={() => setCheckInModalOpen(false)}
-        onCheckInSuccess={fetchDashboard}
+      {/* Check-In Modal */}
+      <CheckInModal 
+        isOpen={checkInModalOpen} 
+        onClose={() => setCheckInModalOpen(false)} 
+        onSaved={() => {
+          setCheckInModalOpen(false);
+          fetchDashboard();
+        }} 
       />
+
     </div>
   );
 };

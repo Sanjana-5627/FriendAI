@@ -142,3 +142,78 @@ export const generateGoalBreakdown = (title, category = 'personal') => {
     ]
   };
 };
+
+/**
+ * Generates an in-depth, empathetic "Day in Review & Reflection" from user's day description.
+ */
+export const generateFallbackDayReview = (dayText, userProfile = {}, userName = 'friend') => {
+  const text = (dayText || '').toLowerCase();
+
+  const positiveWords = ['happy', 'great', 'fun', 'productive', 'proud', 'accomplished', 'relaxed', 'walk', 'coffee', 'read', 'peaceful', 'smile', 'enjoyed', 'laugh', 'good'];
+  const negativeWords = ['exhausted', 'tired', 'stress', 'busy', 'hectic', 'rushed', 'angry', 'sad', 'overwhelmed', 'frustrated', 'bad', 'bored', 'lonely', 'hard', 'struggled'];
+  const socialWords = ['friend', 'friends', 'mom', 'dad', 'family', 'partner', 'talked', 'met', 'call', 'chatted', 'lunch with', 'dinner with'];
+  const workWords = ['work', 'meeting', 'project', 'client', 'code', 'study', 'class', 'exam', 'deadline', 'boss', 'office'];
+  const wellnessWords = ['gym', 'walk', 'exercise', 'cooked', 'ate', 'sleep', 'water', 'stretch', 'run', 'hike'];
+
+  const posCount = positiveWords.filter(w => text.includes(w)).length;
+  const negCount = negativeWords.filter(w => text.includes(w)).length;
+  const hasSocial = socialWords.some(w => text.includes(w));
+  const hasWork = workWords.some(w => text.includes(w));
+  const hasWellness = wellnessWords.some(w => text.includes(w));
+
+  let headline = "Reflections on Today: Finding Balance";
+  let moodScore = 7;
+  let energyScore = 6;
+  let narrative = "";
+  const highlights = [];
+  const frictions = [];
+  let reflectionPrompt = "";
+  let tomorrowIntention = "";
+
+  if (negCount > posCount) {
+    headline = "A Demanding Day of Resilience";
+    moodScore = Math.max(3, 6 - (negCount - posCount));
+    energyScore = Math.max(2, 5 - negCount);
+    narrative = `Today demanded a significant amount of your mental and emotional energy, ${userName}. Reading through what you experienced, it's clear you pushed through several moments of friction and fatigue. It is completely natural to feel drained after carrying this kind of load—give yourself credit for navigating it all without needing everything to be perfect.\n\nNotice where your reserves were tested most. Taking time tonight to acknowledge these challenges without judging yourself allows your nervous system to genuinely unwind and recalibrate.`;
+    frictions.push("Navigated demanding tasks that depleted cognitive and physical energy");
+    if (!hasSocial) frictions.push("Felt isolated or lacked space for meaningful casual connection");
+    highlights.push("Stayed resilient and showed up for yourself despite friction");
+    reflectionPrompt = "What is one expectation you can gently release tonight before you sleep?";
+    tomorrowIntention = "Protect a 20-minute restorative window tomorrow with no screens or obligations.";
+  } else if (posCount > negCount) {
+    headline = "A Grounded, Fulfilling Day in Flow";
+    moodScore = Math.min(10, 7 + (posCount - negCount));
+    energyScore = Math.min(10, 7 + posCount);
+    narrative = `It sounds like today had a wonderful rhythm, ${userName}! You experienced moments of genuine engagement, flow, and personal satisfaction. What stands out most is how your actions aligned with your values—whether that was getting things done, moving your body, or simply enjoying quiet moments.\n\nDays like today are anchor points. When you take a moment to savor what went right, you train your mind to build on this positive momentum tomorrow.`;
+    highlights.push("Experienced fulfilling flow and meaningful moments of progress");
+    if (hasWellness) highlights.push("Nurtured your vitality through healthy habits and intentional movement");
+    if (hasSocial) highlights.push("Shared uplifting connection with people who matter to you");
+    reflectionPrompt = "What was the single most peaceful or satisfying moment of your day today?";
+    tomorrowIntention = "Recreate the best condition from today (e.g. your morning walk or quiet focus window).";
+  } else {
+    headline = "A Steady Day of Quiet Progress";
+    moodScore = 6;
+    energyScore = 6;
+    narrative = `Today was a steady, balanced day with its share of routine and quiet efforts, ${userName}. Not every day needs to be a dramatic breakthrough or a high-stakes adventure; steady days like this are the quiet foundation of your long-term growth and well-being.\n\nYou handled your day's demands and are closing the evening with self-awareness. Taking stock of how your body feels tonight will help you set the pace for tomorrow.`;
+    highlights.push("Maintained steady consistency across your daily responsibilities");
+    frictions.push("Encountered standard daily fatigue and routine pressures");
+    reflectionPrompt = "How does your body feel right now, and what does it need most to feel restored?";
+    tomorrowIntention = "Begin tomorrow with 5 minutes of intentional stillness and a glass of water.";
+  }
+
+  if (hasWork && !hasWellness) {
+    frictions.push("Work/responsibilities took center stage, leaving limited time for physical restoration");
+  }
+
+  return {
+    headline,
+    narrative,
+    highlights: highlights.slice(0, 3),
+    frictions: frictions.slice(0, 2),
+    reflectionPrompt,
+    tomorrowIntention,
+    moodScore,
+    energyScore,
+    offlineMode: true
+  };
+};

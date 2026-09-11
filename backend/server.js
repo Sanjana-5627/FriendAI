@@ -159,7 +159,8 @@ app.use('*', (req, res) => {
 const PORT = process.env.PORT || 5002;
 
 let server = null;
-if (process.env.NODE_ENV !== 'test') {
+const isDirectRun = process.argv[1] && (process.argv[1].endsWith('server.js') || process.argv[1].endsWith('server'));
+if (isDirectRun && process.env.NODE_ENV !== 'test') {
   server = app.listen(PORT, async () => {
     console.log(`\n🌿 FriendAI Server running on port ${PORT}`);
     console.log(`📡 URL: http://localhost:${PORT}`);

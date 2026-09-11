@@ -248,6 +248,34 @@ const runTests = async () => {
     assert.ok(Array.isArray(res.data.wellness_check_ins));
   });
 
+  // 11. Day Review & Reflections Soul Feature
+  await test('Generate complete Day Review and Bedtime Reflection', async () => {
+    const dayText = 'Today was quite a whirlwind. I worked hard on our design system sprint, had lunch in the courtyard sunlight, but felt overwhelmed around 4pm when three urgent emails arrived. I took a short walk and finished the day cooking pasta.';
+    const res = await request('POST', '/api/ai/day-review', { text: dayText }, token1);
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.data.headline, 'Must return review headline');
+    assert.ok(res.data.narrative, 'Must return warm review narrative');
+    assert.ok(Array.isArray(res.data.highlights), 'Must return highlights array');
+    assert.ok(res.data.reflectionPrompt, 'Must return quiet reflection prompt');
+    assert.ok(res.data.tomorrowIntention, 'Must return tomorrow micro-intention');
+    assert.ok(res.data.id, 'Must return saved reflection entry ID');
+  });
+
+  await test('Retrieve Reflections Archive', async () => {
+    const res = await request('GET', '/api/ai/reflections', null, token1);
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.data), 'Must return reflections array');
+    assert.ok(res.data.length >= 1, 'Should contain at least one saved day review');
+  });
+
+  // 12. Instant Demo Login
+  await test('Instant Demo Login returns seeded demo user token', async () => {
+    const res = await request('POST', '/api/auth/demo');
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.data.token, 'Must return valid JWT token');
+    assert.strictEqual(res.data.user.email, 'demo@friendai.com');
+  });
+
   console.log(`\n================================`);
   console.log(`🎉 Test Results: ${passed} Passed, ${failed} Failed`);
   console.log(`================================\n`);

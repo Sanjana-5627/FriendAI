@@ -7,7 +7,8 @@ import { detectCrisisIntent, getCrisisSupportResponse } from '../utils/safety.js
 import {
   generateFallbackJournalAnalysis,
   generateFallbackChatResponse,
-  generateGoalBreakdown
+  generateGoalBreakdown,
+  generateFallbackDayReview
 } from '../utils/geminiFallback.js';
 
 const router = express.Router();
@@ -123,6 +124,103 @@ User's Journal Entry:
   } catch (error) {
     console.error('Journal analysis route error:', error);
     res.status(500).json({ error: 'Failed to process journal reflection' });
+  }
+});
+
+// Dedicated Day Debrief & Reflection Generator
+router.post('/day-review', authenticateToken, async (req, res) => {
+  try {
+    const { text, date } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Please describe what happened during your day' });
+    }
+
+    const cleanText = text.trim();
+
+    if (detectCrisisIntent(cleanText)) {
+      const crisisData = getCrisisSupportResponse();
+      return res.json({ isCrisis: true, ...crisisData });
+    }
+
+    const user = await storage.findUser({ _id: req.user.id });
+    const userProfile = user?.profile || {};
+    const userName = user?.name || 'friend';
+
+    let reviewResult = null;
+    const model = getGeminiModel();
+
+    if (model) {
+      try {
+        const prompt = `You are FriendAI, a wise, warm, perceptive personal friend and companion for ${userName}.
+${userName} has just shared their complete story of how their day went.
+User's story:
+"${cleanText}"
+
+Write a heartfelt, emotionally intelligent Daily Review and Evening Reflection. Do not be generic or clinical. Talk like an empathetic, thoughtful lifelong confidant.
+
+Return ONLY a JSON object matching this schema:
+{
+  "headline": "A poetic or evocative 4-8 word title summarizing the essence of their day",
+  "narrative": "2-3 paragraphs of warm, insightful review. Acknowledge their effort, validate what felt heavy, and mirror the beauty of what went well.",
+  "highlights": ["Highlight 1", "Highlight 2"],
+  "frictions": ["Friction or fatigue point 1", "Friction point 2"],
+  "reflectionPrompt": "A single, deep, grounding question for them to ponder quietly tonight",
+  "tomorrowIntention": "One realistic, gentle micro-ritual or focus for tomorrow",
+  "moodScore": 8,
+  "energyScore": 7
+}`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          reviewResult = JSON.parse(jsonMatch[0]);
+        }
+      } catch (err) {
+        console.warn('Gemini day review failed, using fallback:', err.message);
+      }
+    }
+
+    if (!reviewResult) {
+      reviewResult = generateFallbackDayReview(cleanText, userProfile, userName);
+    }
+
+    const todayDate = date || new Date().toISOString().split('T')[0];
+
+    // Persist as a structured Day Reflection Journal Entry
+    const savedEntry = await storage.createJournalEntry({
+      user_id: req.user.id,
+      transcription: cleanText,
+      type: 'day_review',
+      date: todayDate,
+      headline: reviewResult.headline,
+      ai_response: reviewResult,
+      mood_score: reviewResult.moodScore || 7,
+      created_at: new Date()
+    });
+
+    res.json({
+      id: savedEntry.id || savedEntry._id,
+      date: todayDate,
+      ...reviewResult
+    });
+  } catch (error) {
+    console.error('Day review generation error:', error);
+    res.status(500).json({ error: 'Failed to generate day review' });
+  }
+});
+
+// Retrieve user's historical Day Reflections and Journal entries
+router.get('/reflections', authenticateToken, async (req, res) => {
+  try {
+    const entries = await storage.findJournalEntries(
+      { user_id: req.user.id },
+      { sort: { created_at: -1 } }
+    );
+    res.json(entries || []);
+  } catch (error) {
+    console.error('Fetch reflections error:', error);
+    res.status(500).json({ error: 'Failed to fetch reflections' });
   }
 });
 
