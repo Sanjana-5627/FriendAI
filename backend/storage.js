@@ -676,3 +676,4 @@ class StorageAdapter {
 }
 
 export const storage = new StorageAdapter();
+export default storage;

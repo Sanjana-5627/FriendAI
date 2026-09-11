@@ -148,4 +148,32 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Seed & Instant Login as Demo User
+router.post('/demo', async (req, res) => {
+  try {
+    const { seedDemoData } = await import('../utils/seedData.js');
+    const demoUser = await seedDemoData();
+    const userId = (demoUser._id || demoUser.id).toString();
+    const token = generateToken(userId, demoUser.email);
+
+    const safeUser = {
+      id: userId,
+      _id: userId,
+      name: demoUser.name,
+      email: demoUser.email,
+      profile: demoUser.profile,
+      created_at: demoUser.created_at
+    };
+
+    res.json({
+      token,
+      user: safeUser,
+      message: 'Logged in as Demo User'
+    });
+  } catch (error) {
+    console.error('Demo login error:', error);
+    res.status(500).json({ error: 'Failed to initialize demo account' });
+  }
+});
+
 export default router;

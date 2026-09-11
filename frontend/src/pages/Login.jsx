@@ -11,7 +11,7 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
 
   const handleChange = (e) => {
     setFormData(prev => ({
@@ -114,7 +114,28 @@ const Login = () => {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          {/* Quick Demo Login Option */}
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                await demoLogin();
+                setLoading(false);
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-500/20 flex items-center justify-center space-x-2"
+            >
+              <span>⚡ Instant Demo Access (Pre-seeded Data)</span>
+            </button>
+            <div className="mt-2 text-center">
+              <span className="text-[11px] text-gray-400">
+                Demo: <strong className="text-gray-600 dark:text-gray-300">demo@friendai.com</strong> / <strong className="text-gray-600 dark:text-gray-300">demo123</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
               <Link 
@@ -129,7 +150,7 @@ const Login = () => {
 
         {/* Demo info */}
         <div className="text-center text-xs text-gray-500 dark:text-gray-500">
-          <p>Your personal AI companion for daily wellness tracking</p>
+          <p>Your personal AI companion for daily wellness tracking & anti-loneliness</p>
         </div>
       </div>
     </div>

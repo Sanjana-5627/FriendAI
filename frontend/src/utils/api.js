@@ -48,6 +48,7 @@ api.interceptors.response.use(
 export const apiHelpers = {
   // Authentication & Profile
   login: (email, password) => api.post('/api/auth/login', { email, password }),
+  demoLogin: () => api.post('/api/auth/demo'),
   register: (name, email, password) => api.post('/api/auth/register', { name, email, password }),
   getCurrentUser: () => api.get('/api/auth/me'),
   getProfile: () => api.get('/api/users/profile'),

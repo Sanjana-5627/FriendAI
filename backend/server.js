@@ -160,11 +160,19 @@ const PORT = process.env.PORT || 5002;
 
 let server = null;
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(PORT, () => {
+  server = app.listen(PORT, async () => {
     console.log(`\n🌿 FriendAI Server running on port ${PORT}`);
     console.log(`📡 URL: http://localhost:${PORT}`);
     console.log(`🛡️  Security: Helmet, CORS, and Rate Limiting active`);
     console.log(`💾 Storage: ${storage.isMongoConnected ? 'MongoDB' : 'In-Memory Mode'}`);
+
+    // Auto-seed rich demo data for instant testing
+    try {
+      const { seedDemoData } = await import('./utils/seedData.js');
+      await seedDemoData();
+    } catch (err) {
+      console.warn('Auto-seed notice:', err.message);
+    }
   });
 }
 

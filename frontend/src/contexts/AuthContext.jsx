@@ -125,10 +125,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const demoLogin = async () => {
+    try {
+      const response = await apiHelpers.demoLogin();
+      const { token: newToken, user: userData } = response.data;
+      
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser(userData);
+      
+      toast.success(`Welcome to FriendAI, ${userData.name}!`);
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Demo login failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
+    demoLogin,
     register,
     logout,
     updateProfile,
