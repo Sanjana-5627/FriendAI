@@ -10,6 +10,9 @@ import Tasks from './pages/Tasks';
 import MoodAnalytics from './pages/MoodAnalytics';
 import Goals from './pages/Goals';
 import Habits from './pages/Habits';
+import ConnectExplore from './pages/ConnectExplore';
+import Planner from './pages/Planner';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -44,13 +47,12 @@ const AuthRoute = ({ children }) => {
   return children;
 };
 
-
 // Main app layout with navigation
 const AppLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <Navbar />
-      <main className="pb-4">
+      <main className="pb-10">
         {children}
       </main>
     </div>
@@ -74,7 +76,7 @@ function App() {
                 } 
               />
               
-              {/* Auth routes - redirect to dashboard if logged in */}
+              {/* Auth routes */}
               <Route 
                 path="/login" 
                 element={
@@ -134,6 +136,16 @@ function App() {
                 } 
               />
               <Route 
+                path="/analytics" 
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <MoodAnalytics />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/goals" 
                 element={
                   <ProtectedRoute>
@@ -153,20 +165,50 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/planner" 
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Planner />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/explore" 
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ConnectExplore />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Profile />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } 
+              />
               
-              {/* Redirect unknown routes to login */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
+              {/* Redirect unknown routes to dashboard or login */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
             
             {/* Toast notifications */}
             <Toaster
               position="top-right"
               toastOptions={{
-                duration: 4000,
-                className: 'dark:bg-gray-800 dark:text-gray-100',
+                duration: 3500,
+                className: 'dark:bg-gray-800 dark:text-gray-100 text-xs font-semibold shadow-lg',
                 style: {
-                  background: 'var(--toast-bg)',
-                  color: 'var(--toast-text)',
+                  borderRadius: '16px',
+                  padding: '12px 16px',
                 },
               }}
             />

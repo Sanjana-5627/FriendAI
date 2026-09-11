@@ -1,5 +1,7 @@
-// Authentication middleware
+// Authentication middleware & token helper utilities
 import jwt from 'jsonwebtoken';
+
+const getJwtSecret = () => process.env.JWT_SECRET || 'friendai_super_secret_jwt_key_2025';
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -9,11 +11,26 @@ export const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, getJwtSecret(), (err, decoded) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      return res.status(403).json({ error: 'Invalid or expired session. Please log in again.' });
     }
-    req.user = user;
+    
+    // Normalize id field so all routes can safely use req.user.id
+    const userId = decoded.userId || decoded.id || decoded._id;
+    req.user = {
+      ...decoded,
+      id: userId,
+      userId: userId
+    };
     next();
   });
+};
+
+export const generateToken = (userId, email) => {
+  return jwt.sign(
+    { userId, id: userId, email },
+    getJwtSecret(),
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
 };

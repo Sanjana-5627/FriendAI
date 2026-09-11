@@ -1,243 +1,272 @@
 import React, { useState, useEffect } from 'react';
 import { apiHelpers } from '../utils/api';
-import { BarChart3, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { 
+  BarChart3, 
+  Calendar, 
+  TrendingUp, 
+  TrendingDown, 
+  Activity, 
+  Moon, 
+  Zap, 
+  Users, 
+  Info,
+  Sparkles
+} from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme } from '../contexts/ThemeContext';
 
 const MoodAnalytics = () => {
   const { isDark } = useTheme();
-  const [moodData, setMoodData] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('weekly');
+  const [activeTab, setActiveTab] = useState('mood_energy');
 
-  useEffect(() => {
-    fetchMoodData();
-  }, [period]);
-
-  const fetchMoodData = async () => {
+  const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await apiHelpers.getMoodAnalytics(period);
-      setMoodData(response.data);
+      const res = await apiHelpers.getMoodAnalytics(period);
+      setData(res.data);
     } catch (error) {
-      console.error('Failed to fetch mood data:', error);
-      toast.error('Failed to load mood analytics');
+      console.error('Analytics error:', error);
+      toast.error('Failed to load wellness analytics');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner text="Loading your mood analytics..." />;
+  useEffect(() => {
+    fetchAnalytics();
+  }, [period]);
+
+  if (loading && !data) {
+    return <LoadingSpinner text="Crunching multi-metric wellness trends..." />;
   }
 
-  const chartData = moodData?.data?.filter(d => d.mood !== null) || [];
-  const stats = moodData?.stats || {
-    average: 0,
-    highest: 0,
-    lowest: 0,
-    totalEntries: 0
-  };
+  const timeline = data?.timeline || [];
+  const stats = data?.stats || {};
+  const patterns = data?.patterns || [];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+      
+      {/* Header & Period Controls */}
+      <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Mood Analytics</h1>
-          <p className="text-gray-600 dark:text-gray-400">Track your emotional wellness over time</p>
+          <div className="flex items-center space-x-2">
+            <BarChart3 className="w-6 h-6 text-indigo-500" />
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+              Wellness & Habit Analytics
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Holistic trends connecting mood, sleep, stress, activity, and focus
+          </p>
         </div>
-        
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setPeriod('weekly')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              period === 'weekly'
-                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
-            }`}
-          >
-            Weekly
-          </button>
-          <button
-            onClick={() => setPeriod('monthly')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              period === 'monthly'
-                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
-            }`}
-          >
-            Monthly
-          </button>
+
+        <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl">
+          {['weekly', 'monthly', 'all'].map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                period === p
+                  ? 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              {p === 'all' ? 'All-Time' : p}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Mood</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.average}/10
-              </p>
-            </div>
-            <BarChart3 className="w-8 h-8 text-gray-500 dark:text-gray-400" />
-          </div>
+      {/* Summary Scorecards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Mood</p>
+          <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{stats.averageMood}/10</p>
+          <p className="text-[10px] text-emerald-500 font-bold mt-0.5">High: {stats.highestMood} / Low: {stats.lowestMood}</p>
         </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Highest</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {stats.highest}/10
-              </p>
-            </div>
-            <TrendingUp className="w-8 h-8 text-green-500" />
-          </div>
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Energy</p>
+          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{stats.averageEnergy}/10</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">Daily vitality level</p>
         </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Lowest</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                {stats.lowest}/10
-              </p>
-            </div>
-            <TrendingDown className="w-8 h-8 text-red-500" />
-          </div>
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Sleep</p>
+          <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{stats.averageSleep} hrs</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">Recommended: 7-9 hrs</p>
         </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Entries</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.totalEntries}
-              </p>
-            </div>
-            <Calendar className="w-8 h-8 text-gray-500 dark:text-gray-400" />
-          </div>
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Avg Stress</p>
+          <p className="text-2xl font-black text-rose-500 mt-1">{stats.averageStress}/10</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">Lower is healthier</p>
         </div>
       </div>
 
-      {/* Mood Chart */}
-      <div className="card mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-          Mood Trend - {period.charAt(0).toUpperCase() + period.slice(1)}
-        </h3>
-        
-        {chartData.length > 0 ? (
-          <div className="h-64">
+      {/* Chart View Tabs */}
+      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-3">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setActiveTab('mood_energy')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'mood_energy'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              Mood & Energy
+            </button>
+            <button
+              onClick={() => setActiveTab('sleep_stress')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'sleep_stress'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              Sleep & Stress
+            </button>
+            <button
+              onClick={() => setActiveTab('habits_activity')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'habits_activity'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              Habits & Movement
+            </button>
+          </div>
+
+          <span className="text-[11px] font-semibold text-gray-400">
+            {timeline.length} Days Sampled
+          </span>
+        </div>
+
+        {/* Recharts Container */}
+        <div className="h-72 sm:h-80 w-full pt-2">
+          {timeline.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid 
-                  strokeDasharray="3 3" 
-                  stroke={isDark ? '#374151' : '#e5e7eb'}
-                  className="opacity-30" 
-                />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }}
-                  axisLine={{ stroke: isDark ? '#4b5563' : '#d1d5db' }}
-                  tickLine={{ stroke: isDark ? '#4b5563' : '#d1d5db' }}
-                />
-                <YAxis 
-                  domain={[0, 10]}
-                  tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }}
-                  axisLine={{ stroke: isDark ? '#4b5563' : '#d1d5db' }}
-                  tickLine={{ stroke: isDark ? '#4b5563' : '#d1d5db' }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: isDark ? '#1f2937' : 'white',
-                    border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    color: isDark ? '#f3f4f6' : '#111827'
-                  }}
-                  labelStyle={{ color: isDark ? '#f3f4f6' : '#111827' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="mood"
-                  stroke={isDark ? '#f3f4f6' : '#1f2937'}
-                  strokeWidth={3}
-                  dot={{ 
-                    fill: isDark ? '#f3f4f6' : '#1f2937', 
-                    strokeWidth: 2, 
-                    r: 4,
-                    stroke: isDark ? '#1f2937' : '#f3f4f6'
-                  }}
-                  activeDot={{ 
-                    r: 6, 
-                    fill: isDark ? '#f3f4f6' : '#1f2937',
-                    stroke: isDark ? '#1f2937' : '#f3f4f6',
-                    strokeWidth: 2
-                  }}
-                />
-              </LineChart>
+              {activeTab === 'mood_energy' ? (
+                <LineChart data={timeline}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f3f4f6'} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: isDark ? '#111827' : '#ffffff',
+                      borderColor: isDark ? '#374151' : '#e5e7eb',
+                      borderRadius: '12px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="mood" stroke="#6366f1" strokeWidth={3} name="Mood (1-10)" />
+                  <Line type="monotone" dataKey="energy" stroke="#10b981" strokeWidth={2.5} name="Energy (1-10)" />
+                </LineChart>
+              ) : activeTab === 'sleep_stress' ? (
+                <LineChart data={timeline}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f3f4f6'} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: isDark ? '#111827' : '#ffffff',
+                      borderColor: isDark ? '#374151' : '#e5e7eb',
+                      borderRadius: '12px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="sleepHours" stroke="#3b82f6" strokeWidth={3} name="Sleep (Hours)" />
+                  <Line type="monotone" dataKey="stress" stroke="#f43f5e" strokeWidth={2.5} name="Stress Level (1-10)" />
+                </LineChart>
+              ) : (
+                <BarChart data={timeline}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#f3f4f6'} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 11, fill: isDark ? '#9ca3af' : '#6b7280' }} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: isDark ? '#111827' : '#ffffff',
+                      borderColor: isDark ? '#374151' : '#e5e7eb',
+                      borderRadius: '12px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="habitsCompleted" fill="#8b5cf6" name="Habits Completed" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="activityMinutes" fill="#14b8a6" name="Activity (Minutes)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              )}
             </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs text-gray-400">
+              No historical entries found for this period. Complete daily check-ins to build rich trends.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Pattern Correlation Insights (Non-Medical) */}
+      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="w-5 h-5 text-indigo-500" />
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+              Habit & Wellness Pattern Correlations
+            </h2>
+          </div>
+          <span className="text-[10px] uppercase font-bold text-gray-400 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+            Statistical Patterns
+          </span>
+        </div>
+
+        {patterns.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+            {patterns.map((p, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 space-y-1.5 text-xs"
+              >
+                <h4 className="font-bold text-indigo-600 dark:text-indigo-400">{p.title}</h4>
+                <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{p.observation}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-[11px] italic">{p.suggestion}</p>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              No mood data yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Start journaling to track your mood trends over time
-            </p>
-          </div>
+          <p className="text-xs text-gray-500 py-3">
+            Keep recording daily check-ins! As you log 3+ days, FriendAI will detect patterns between your sleep, physical movement, screen time, and emotional vitality.
+          </p>
         )}
-      </div>
 
-      {/* Insights */}
-      {chartData.length > 2 && (
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Insights
-          </h3>
-          
-          <div className="space-y-4">
-            {stats.average > 7 && (
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <h4 className="font-medium text-green-800 dark:text-green-200 mb-1">
-                  🌟 Great Mood Trend!
-                </h4>
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  Your average mood score is {stats.average.toFixed(1)}/10. You've been maintaining excellent emotional wellness!
-                </p>
-              </div>
-            )}
-            
-            {stats.average < 5 && (
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">
-                  💛 Room for Improvement
-                </h4>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                  Your average mood has been {stats.average.toFixed(1)}/10. Consider talking to your AI friend more often for personalized suggestions.
-                </p>
-              </div>
-            )}
-
-            {stats.totalEntries >= 7 && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">
-                  📈 Consistent Tracking
-                </h4>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  You've logged {stats.totalEntries} mood entries! Consistency is key to understanding your emotional patterns.
-                </p>
-              </div>
-            )}
-          </div>
+        <div className="flex items-start space-x-2 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl text-[11px] text-gray-500 dark:text-gray-400 mt-3">
+          <Info className="w-4 h-4 shrink-0 text-indigo-500 mt-0.5" />
+          <span>
+            {data?.disclaimer || 'These insights are statistical habit patterns meant for personal self-reflection, not clinical diagnosis or medical causation.'}
+          </span>
         </div>
-      )}
+      </div>
 
     </div>
   );

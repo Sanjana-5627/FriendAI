@@ -1,430 +1,266 @@
-# 🧠 AI Friend - Personal Wellness Companion
+# 🌿 FriendAI - Personal Wellness & Anti-Loneliness Companion
 
-A comprehensive AI-powered wellness application that helps you track your mood, manage tasks, build habits, and achieve goals through intelligent journaling and analytics.
+An AI-powered personal wellness, routine-building, and anti-loneliness companion built with **React 18**, **Node.js + Express**, **MongoDB** (with zero-config In-Memory development fallback), and **Google Gemini AI** (with robust local rule-based fallback).
 
----
-
-## 🌟 Features
-
-### Core Features
-- **🗣️ Daily AI Conversations** - Chat with your AI companion about your day
-- **📊 Mood Tracking** - Automatic mood analysis with interactive charts
-- **✅ Task Management** - Create, track, and manage tasks with priorities
-- **🎯 Goal Setting** - Set long-term goals with milestones and progress tracking
-- **⚡ Habit Tracker** - Build positive habits with streak counting
-- **📈 Analytics Dashboard** - AI-powered insights and correlations
-- **💾 Data Export** - Export all your data in JSON or CSV format
-- **🌓 Dark/Light Mode** - Seamless theme switching
-- **📱 Fully Responsive** - Works perfectly on all devices
-
-### AI-Powered Intelligence
-- Mood detection from journal entries
-- Personalized insights and recommendations
-- Pattern recognition across mood, tasks, and habits
-- Smart task/goal/habit suggestions from conversations
-- Correlation analysis (e.g., "Your mood is higher on days you exercise")
+FriendAI bridges digital well-being with real-world activity: tracking holistic wellness, breaking down goals, building verified habit streaks, detecting loneliness or isolation patterns, generating balanced daily timetables, and offering curated nearby exploration recommendations.
 
 ---
 
-## 🛠️ Tech Stack
+## 🌟 Key Features
 
-### Backend
-- **Runtime**: Node.js + Express.js
-- **Database**: MongoDB with Mongoose (with in-memory fallback)
-- **AI**: Google Gemini AI for intelligent conversations
-- **Authentication**: JWT-based auth with bcrypt password hashing
-- **Security**: Rate limiting, helmet, CORS, input validation
+### 1. 👤 Privacy-Conscious Personal Wellness Profile
+- **Adaptive Personalization**: Age range (no exact DOB collected), typical sleep schedules, work/study routines, activity levels, social preferences, dietary interests, and goals.
+- **Privacy & Safety**: Zero collection of sensitive health identifiers; full in-app editing and instant account/data deletion.
+- **Location Status**: Voluntary location toggle with distance-based filtering and fallback to regional hubs.
 
-### Frontend
-- **Framework**: React 18 with modern hooks
-- **Styling**: TailwindCSS with custom design system
-- **Routing**: React Router v6
-- **Charts**: Recharts for mood visualizations
-- **HTTP Client**: Axios with interceptors
-- **Notifications**: React Hot Toast
-- **Icons**: Lucide React
+### 2. ⚡ Rapid Daily Wellness Check-In (< 45 Seconds)
+- Designed to eliminate form fatigue with an intuitive single-view modal:
+  - **Mood & Vitality**: 1-10 slider scales for Mood, Energy, and Stress.
+  - **Rest & Health**: Sleep duration (hours), sleep quality, physical activity (minutes).
+  - **Social & Digital Balance**: Social interaction rating (1-10), screen time (hours), productivity (1-10).
+  - **Reflection**: Optional brief journal entry with instant sentiment extraction.
 
----
+### 3. 📊 Holistic Multi-Metric Analytics & Correlation Engine
+- **Cross-Metric Visual Trends**: Recharts-powered graphs comparing Mood vs Energy, Sleep vs Stress, and Physical Activity vs Social Interaction.
+- **Statistical Correlation Patterns**: Identifies lifestyle correlations (e.g., *"Your mood averages 2.1 points higher on days with 30+ min of physical exercise"*).
+- **Responsible Labeling**: Clearly distinguished as statistical patterns and correlations—never claiming medical causation.
 
-## 🚀 Quick Start
+### 4. 🧭 Anti-Loneliness & Community Hub ("Connect & Explore")
+- **Isolation Pattern Detection**: Identifies sustained low social activity, elevated screen time, or sedentary routines.
+- **Gentle Reconnection Suggestions**: Personalized, non-shaming prompts (walking in sunlight, visiting a library, phoning a friend, coffee shops, hobby workshops).
+- **Nearby Places & Activities Directory**: Filter by category (Parks, Cafes, Libraries, Gyms, Cultural, Community), maximum distance, and cost (Free vs Paid).
+- **Graceful Geolocation**: Works seamlessly with browser location or gracefully falls back to default regional recommendations without crashing.
 
-### Prerequisites
-- Node.js 18+ and npm
-- MongoDB URI (optional - uses in-memory storage if not provided)
-- Google Gemini API key
+### 5. 🗓️ Personalized AI Daily Timetable & Planner
+- **Balanced Hourly Blueprint**: Synthesizes tasks, goals, habits, sleep routine, and free time into a realistic daily itinerary.
+- **Overload Prevention**: Automatically blocks out focus blocks, meal breaks, restorative walks, and wind-down periods.
+- **Interactive Control**: Mark schedule blocks complete, skip with a note, or click **Regenerate Schedule** on demand.
 
-### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd PersonalFriendAI
-```
+### 6. 🛡️ Crisis Safety & Distress Protocol
+- **Empathetic Distress Interception**: Automated real-time safety scanning for self-harm, severe crisis, or extreme emotional distress keywords.
+- **Non-Clinical Boundaries**: Clearly states that FriendAI is an AI companion, not a licensed therapist or medical provider.
+- **Emergency Resources**: Automatically presents the **988 Suicide & Crisis Lifeline** (Call/Text 988), Crisis Text Line (HOME to 741741), and International resources.
 
-### 2. Backend Setup
-```bash
-cd backend
-npm install
-```
+### 7. 🤖 Context-Aware AI Chat & One-Click Actions
+- **Grounded Memory**: Leverages user's recent mood, top priorities, and profile context rather than generic chatbot loops.
+- **One-Click Action Cards**: When the AI suggests a healthy action, users can instantly click **"Add to Tasks"**, **"Add to Habits"**, or **"Add to Goals"** without retyping.
+- **Multimodal Voice Support**: Browser speech-to-text transcription and native Web Speech text-to-speech.
 
-Create `.env` file:
-```env
-# Required
-GEMINI_API_KEY=your_gemini_api_key_here
-JWT_SECRET=your_secret_key_here
+### 8. ⚡ Verified Habit Tracker & Anti-Cheat Streaks
+- **Streak Integrity**: Prevents future-date completion and duplicate submissions on the same calendar day.
+- **Visual Progress**: 7-day completion mini-grids, category tags (Mindfulness, Health, Productivity, Social), and all-time record counters.
 
-# Optional (uses in-memory storage if not provided)
-MONGODB_URI=mongodb://localhost:27017/ai-friend
+### 9. 🎯 Tasks & Goals Overhaul
+- **Priority & Due Dates**: High/Medium/Low priorities, categories, and overdue indicators.
+- **Milestone Breakdown**: AI-assisted breakdown to turn intimidating goals into bite-sized actionable steps.
 
-# Optional Configuration
-PORT=5002
-NODE_ENV=development
-JWT_EXPIRES_IN=7d
-BCRYPT_ROUNDS=12
-```
-
-Start backend:
-```bash
-npm run dev
-```
-
-### 3. Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 4. Access Application
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5002
+### 10. 💾 Data Sovereignty, Security & Export
+- **One-Click Data Export**: Download complete user archives in JSON or CSV formats.
+- **Security Hardening**: BCrypt 12 rounds, JWT authentication, Express rate limiting, Helmet HTTP headers, CORS whitelisting, and strict user-level data isolation.
 
 ---
 
-## 📁 Project Structure
+## 🛠️ Architecture & Tech Stack
 
 ```
-PersonalFriendAI/
+FriendAI/
 ├── backend/
 │   ├── middleware/
-│   │   └── auth.js              # Authentication middleware
+│   │   └── auth.js              # JWT verification & req.user normalization
 │   ├── routes/
-│   │   └── auth.js              # Auth routes (modular)
+│   │   ├── auth.js              # Registration, login, /me
+│   │   ├── users.js             # Profile management & account deletion
+│   │   ├── ai.js                # Chat, goal breakdown, speech, safety
+│   │   ├── wellness.js          # Quick daily check-in & history
+│   │   ├── mood.js              # Multi-metric analytics & pattern engine
+│   │   ├── tasks.js             # Prioritized task manager
+│   │   ├── goals.js             # Goals & milestone progress
+│   │   ├── habits.js            # Streaks, frequency, completion history
+│   │   ├── schedule.js          # AI daily timetable planner
+│   │   ├── recommendations.js   # Anti-loneliness engine & nearby places
+│   │   ├── notifications.js     # System reminders & drawer
+│   │   ├── dashboard.js         # Unified score & dashboard aggregator
+│   │   └── export.js            # Full data export (JSON & CSV)
 │   ├── utils/
-│   │   └── helpers.js           # Utility functions
-│   ├── models.js                # MongoDB schemas
-│   ├── storage.js               # Storage abstraction layer
-│   ├── server.js                # Express app & routes
-│   ├── .env                     # Environment variables
-│   └── package.json
+│   │   ├── safety.js            # Crisis detection & 988 helpline protocol
+│   │   ├── geminiFallback.js    # Rule-based offline AI & sentiment fallback
+│   │   └── placesData.js        # Curated places & activities directory
+│   ├── models.js                # MongoDB Mongoose schemas & indexes
+│   ├── storage.js               # Dual-Engine: MongoDB + In-Memory Fallback
+│   ├── server.js                # Express app configuration & middleware
+│   └── tests/
+│       └── api.test.js          # 20 Automated backend test suites
 │
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx       # Navigation with hamburger menu
-│   │   │   └── LoadingSpinner.jsx
-│   │   ├── contexts/
-│   │   │   ├── AuthContext.jsx  # Authentication state
-│   │   │   └── ThemeContext.jsx # Theme management
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx    # Main dashboard
-│   │   │   ├── Chat.jsx         # Conversational journal
-│   │   │   ├── Tasks.jsx        # Task management
-│   │   │   ├── Goals.jsx        # Goal tracking
-│   │   │   ├── Habits.jsx       # Habit building
-│   │   │   ├── Mood.jsx         # Mood analytics
-│   │   │   ├── Login.jsx        # Authentication
-│   │   │   └── Register.jsx
-│   │   ├── utils/
-│   │   │   └── api.js           # API helper functions
-│   │   ├── App.jsx              # Main app component
-│   │   └── index.css            # Global styles
-│   └── package.json
-│
-└── README.md                    # This file
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── Navbar.jsx               # Responsive glassmorphic navigation
+    │   │   ├── CheckInModal.jsx         # <45s quick wellness check-in modal
+    │   │   ├── NotificationDrawer.jsx   # Reminders slide-over
+    │   │   ├── SafetyCrisisModal.jsx    # 988 Lifeline support modal
+    │   │   └── LoadingSpinner.jsx       # Polished loading state
+    │   ├── contexts/
+    │   │   ├── AuthContext.jsx          # Auth, session, profile state
+    │   │   └── ThemeContext.jsx         # Dark/Light mode theme state
+    │   ├── pages/
+    │   │   ├── Dashboard.jsx            # Wellness ring, timetable, insights
+    │   │   ├── Chat.jsx                 # AI companion with action cards
+    │   │   ├── ConnectExplore.jsx       # Anti-loneliness & place directory
+    │   │   ├── Planner.jsx              # Daily schedule timetable
+    │   │   ├── Tasks.jsx                # Prioritized task list
+    │   │   ├── Goals.jsx                # Milestones & AI breakdown
+    │   │   ├── Habits.jsx               # Streak tracking & categories
+    │   │   ├── MoodAnalytics.jsx        # Multi-metric charts & correlations
+    │   │   ├── Profile.jsx              # Profile editor, export, account
+    │   │   ├── Login.jsx                # Secure login
+    │   │   └── Register.jsx             # Secure signup
+    │   ├── utils/
+    │   │   └── api.js                   # Axios client with port 5002 fallback
+    │   └── App.jsx                      # Protected routing
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API Endpoints Summary
 
-### Authentication
-```
-POST   /api/auth/register    # Create account
-POST   /api/auth/login       # Sign in
-GET    /api/auth/me          # Get current user
-```
-
-### AI Features
-```
-POST   /api/ai/analyze       # Analyze text and detect mood
-POST   /api/ai/speak         # Text-to-speech (browser-based)
-```
-
-### Dashboard
-```
-GET    /api/dashboard        # Get dashboard data with AI insights
-```
-
-### Journal
-```
-GET    /api/journal          # Get journal entries
-POST   /api/journal          # Create journal entry
-```
-
-### Tasks
-```
-GET    /api/tasks            # Get all tasks
-POST   /api/tasks            # Create task
-PUT    /api/tasks/:id        # Update task
-DELETE /api/tasks/:id        # Delete task
-```
-
-### Goals
-```
-GET    /api/goals            # Get all goals (filter by status)
-POST   /api/goals            # Create goal
-PUT    /api/goals/:id        # Update goal (progress, milestones)
-DELETE /api/goals/:id        # Delete goal
-```
-
-### Habits
-```
-GET    /api/habits           # Get all habits (filter by active)
-POST   /api/habits           # Create habit
-PUT    /api/habits/:id       # Update habit
-POST   /api/habits/:id/complete  # Mark habit as completed
-DELETE /api/habits/:id       # Delete habit
-```
-
-### Mood Analytics
-```
-GET    /api/mood/analytics   # Get mood data (weekly/monthly)
-```
-
-### Data Export
-```
-GET    /api/export?format=json  # Export all data as JSON
-GET    /api/export?format=csv   # Export journal as CSV
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Register new user account |
+| `POST` | `/api/auth/login` | Authenticate user & issue JWT |
+| `GET` | `/api/auth/me` | Fetch authenticated user data & profile |
+| `GET` | `/api/users/profile` | Retrieve personal wellness profile |
+| `PUT` | `/api/users/profile` | Update wellness profile settings |
+| `DELETE` | `/api/users/account` | Permanently delete account & all user data |
+| `POST` | `/api/wellness/check-in` | Submit daily wellness check-in |
+| `GET` | `/api/wellness/check-in/today` | Check if user logged wellness today |
+| `GET` | `/api/wellness/history` | Retrieve wellness check-in history |
+| `GET` | `/api/dashboard` | Aggregated dashboard data & wellness score |
+| `POST` | `/api/ai/chat` | AI companion conversation with distress check |
+| `POST` | `/api/ai/breakdown-goal` | Generate AI milestone action steps for a goal |
+| `GET` | `/api/schedule` | Retrieve today's daily schedule |
+| `POST` | `/api/schedule/regenerate` | Regenerate realistic timetable |
+| `PUT` | `/api/schedule/items/:itemId` | Mark schedule item completed/skipped |
+| `GET` | `/api/recommendations` | Anti-loneliness recommendations |
+| `GET` | `/api/recommendations/places` | Curated places with category & distance filters |
+| `GET` | `/api/mood/analytics` | Multi-metric timeline & pattern correlations |
+| `GET` | `/api/tasks` | Get user tasks (with priority & category) |
+| `POST` | `/api/tasks` | Create task |
+| `PUT` | `/api/tasks/:id` | Update / toggle task completion |
+| `DELETE` | `/api/tasks/:id` | Delete task |
+| `GET` | `/api/goals` | Get user goals with milestones |
+| `POST` | `/api/goals` | Create goal |
+| `PUT` | `/api/goals/:id` | Update goal / milestones |
+| `DELETE` | `/api/goals/:id` | Delete goal |
+| `GET` | `/api/habits` | Get habits with streak calculation |
+| `POST` | `/api/habits` | Create habit |
+| `POST` | `/api/habits/:id/complete` | Complete habit for today (prevents duplicates) |
+| `DELETE` | `/api/habits/:id` | Delete habit |
+| `GET` | `/api/notifications` | Get system notifications & reminders |
+| `PUT` | `/api/notifications/:id/read` | Mark notification read |
+| `GET` | `/api/export?format=json\|csv` | Export all user data |
 
 ---
 
-## 🎨 Key Features Explained
+## 🚀 Getting Started
 
-### 1. Conversational Journaling
-- Chat interface for daily reflections
-- AI detects mood from your writing
-- Suggests actionable tasks, goals, or habits
-- One-click to add suggestions to your lists
-- Persistent chat history (daily-based)
-- Browser text-to-speech for AI responses
+### Prerequisites
+- **Node.js**: v18.0 or higher
+- **npm**: v8.0 or higher
+- **MongoDB**: Optional (app runs automatically in In-Memory mode if not provided)
+- **Google Gemini API Key**: Optional (built-in offline AI fallback included)
 
-### 2. Smart Dashboard
-- AI-generated insights based on your data
-- Correlations (e.g., "High mood correlates with task completion")
-- Quick stats: streak, mood, goals, habits
-- Today's habits with completion tracking
-- Active goals with progress bars
-- Upcoming tasks with due dates
-- Recent journal entries
+### 1. Installation
 
-### 3. Task Management
-- Create tasks with title, description, due date, priority
-- Smart task suggestions based on time of day
-- One-click task completion
-- Link tasks to goals (optional)
-- Delete with completion confirmation
+```bash
+# Clone the repository
+git clone https://github.com/Sanjana-5627/FriendAI.git
+cd FriendAI
 
-### 4. Goal Tracking
-- Set goals with categories (Health, Career, Personal, etc.)
-- Add milestones to break down goals
-- Visual progress bars (0-100%)
-- Track completion status
-- Filter by active/completed/abandoned
+# Install backend dependencies
+cd backend
+npm install
 
-### 5. Habit Building
-- Create daily, weekly, or custom habits
-- Automatic streak calculation
-- Visual 7-day completion history
-- Prevent duplicate completions
-- Gamification with fire emoji for streaks
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
 
-### 6. Mood Analytics
-- Weekly and monthly mood charts
-- Average mood calculation
-- Trend analysis
-- Correlation with habits and tasks
+### 2. Environment Configuration
 
----
+Create `backend/.env` (or copy from `backend/.env.example`):
 
-## 🔒 Security Features
-
-- **Password Security**: bcrypt hashing with 12 rounds
-- **Authentication**: JWT tokens with configurable expiration
-- **Rate Limiting**: Separate limits for auth, AI, and general routes
-- **Input Validation**: Server-side validation for all inputs
-- **CORS**: Configured for frontend origin
-- **Helmet**: Security headers
-- **Data Isolation**: User-specific data filtering
-
----
-
-## 💾 Data Storage
-
-### MongoDB Mode (Production)
-- Persistent data storage
-- Scalable and reliable
-- Automatic indexing for performance
-
-### In-Memory Mode (Development)
-- No MongoDB required
-- Perfect for testing
-- Data resets on server restart
-- Automatically used if `MONGODB_URI` is not provided
-
----
-
-## 🎯 Environment Variables
-
-### Required
 ```env
-GEMINI_API_KEY=<your-gemini-api-key>
-JWT_SECRET=<random-secret-string>
+# Required for authentication
+JWT_SECRET=friendai_super_secret_production_key_2026
+
+# AI Engine (Optional: uses offline algorithmic fallback if omitted)
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Database (Optional: uses in-memory storage if omitted)
+MONGODB_URI=mongodb://localhost:27017/friendai
+
+# Server Port
+PORT=5002
+NODE_ENV=development
 ```
 
-### Optional
-```env
-MONGODB_URI=<mongodb-connection-string>  # Uses in-memory if not set
-PORT=5002                                # Default: 5002
-NODE_ENV=development                     # development | production
-JWT_EXPIRES_IN=7d                        # Token expiration
-BCRYPT_ROUNDS=12                         # Password hashing rounds
+### 3. Run Automated Tests
+
+Run the complete 20-suite automated backend test suite:
+
+```bash
+cd backend
+npm test
+```
+
+### 4. Start Development Servers
+
+In terminal 1 (Backend):
+```bash
+cd backend
+npm run dev
+# Server runs on http://localhost:5002
+```
+
+In terminal 2 (Frontend):
+```bash
+cd frontend
+npm run dev
+# App runs on http://localhost:3000
+```
+
+### 5. Build for Production
+
+```bash
+cd frontend
+npm run build
 ```
 
 ---
 
-## 🚨 Important Notes
+## 🧪 Testing & Quality Assurance
 
-1. **Gemini API Required**: You need a Google Gemini API key for AI features
-   - Get it from: https://makersuite.google.com/app/apikey
-
-2. **MongoDB Optional**: App works without MongoDB using in-memory storage
-   - Perfect for development and testing
-   - Use MongoDB for production to persist data
-
-3. **Browser Compatibility**: 
-   - Speech recognition works best in Chrome/Edge
-   - Text-to-speech uses browser's native synthesis
-
-4. **Data Persistence**: 
-   - In-memory mode: Data lost on restart
-   - MongoDB mode: Data persists permanently
-
-5. **Port Configuration**: 
-   - Backend: 5002 (configurable)
-   - Frontend: 3000 (Vite default)
+The project includes an automated test runner (`backend/tests/api.test.js`) verifying:
+1. User registration & duplicate prevention
+2. Password hashing & authentication
+3. Strict user-level data isolation (User B cannot access User A's tasks or records)
+4. Wellness check-in submission and today's status tracking
+5. Verified habit streak tracking & same-day duplicate prevention
+6. Timetable generation and milestone action step breakdown
+7. Crisis distress detection and 988 Lifeline support triggers
+8. Comprehensive JSON & CSV data export
 
 ---
 
-## 📱 Mobile Responsiveness
+## 🔒 Security & Privacy Practices
 
-- **Hamburger Menu**: Mobile navigation with slide-down menu
-- **Touch-Friendly**: Optimized tap targets (44x44px minimum)
-- **Responsive Text**: Scales from mobile to desktop
-- **Adaptive Layouts**: 1-4 column grids based on screen size
-- **No Horizontal Scroll**: Content fits all screen widths
-
----
-
-## 🐛 Troubleshooting
-
-### Backend won't start
-```bash
-# Check if port 5002 is in use
-lsof -i :5002
-
-# Kill process if needed
-kill -9 <PID>
-
-# Check environment variables
-cat backend/.env
-```
-
-### Frontend won't connect to backend
-```bash
-# Verify backend is running
-curl http://localhost:5002/api/auth/me
-
-# Check CORS settings in server.js
-# Ensure frontend URL is allowed
-```
-
-### MongoDB connection issues
-```bash
-# Test MongoDB connection
-mongosh <your-mongodb-uri>
-
-# Or use in-memory mode
-# Remove MONGODB_URI from .env
-```
-
-### AI features not working
-```bash
-# Verify Gemini API key
-echo $GEMINI_API_KEY
-
-# Test API key
-curl -H "Content-Type: application/json" \
-  -d '{"contents":[{"parts":[{"text":"Hello"}]}]}' \
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=YOUR_API_KEY"
-```
-
----
-
-## 🎓 Development Guide
-
-### Adding a New Feature
-1. Create database model in `models.js`
-2. Add storage methods in `storage.js`
-3. Create API routes in `server.js` (or new route file)
-4. Add API helper in `frontend/src/utils/api.js`
-5. Create frontend page/component
-6. Add route in `App.jsx`
-7. Update navigation in `Navbar.jsx`
-
-### Code Style
-- Use ES6+ features
-- Async/await for promises
-- Functional components with hooks
-- TailwindCSS for styling
-- Meaningful variable names
-- Comments for complex logic
+- **Zero Medical Pretense**: Prominently informs users that the AI is an emotional support companion, not healthcare or psychiatric care.
+- **Crisis Intervention**: Immediate compassionate response and emergency helpline display on detection of distress signals.
+- **Data Isolation**: All MongoDB queries and in-memory lookups enforce strict `user: req.user.id` tenancy.
+- **Sensitive Fields Redaction**: Password hashes, internal tokens, and system secrets are never exposed in API outputs.
+- **OWASP Compliance**: Protected with Helmet headers, CORS policies, Express rate limiting, and parameter sanitization.
 
 ---
 
 ## 📄 License
-
-This project is for personal use and learning purposes.
-
----
-
-## 🙏 Acknowledgments
-
-- **Google Gemini AI** - For intelligent conversation capabilities
-- **MongoDB** - For reliable data storage
-- **React** - For building the user interface
-- **TailwindCSS** - For beautiful styling
-- **Lucide React** - For clean, modern icons
-
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check the Troubleshooting section above
-2. Review the code comments
-3. Check console logs for errors
-4. Verify environment variables are set correctly
-
----
-
-**Built with ❤️ for personal wellness and productivity**
+This project is licensed under the MIT License.

@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { apiHelpers } from '../utils/api';
-import { Target, Plus, Trash2, CheckCircle, Circle, Calendar } from 'lucide-react';
+import { 
+  Target, 
+  Plus, 
+  Trash2, 
+  CheckCircle2, 
+  Circle, 
+  Calendar, 
+  Sparkles, 
+  Check, 
+  Layers 
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -8,7 +18,9 @@ const Goals = () => {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [filter, setFilter] = useState('active');
+  const [filter, setFilter] = useState('active'); // active, completed, all
+  const [breakingDown, setBreakingDown] = useState(null); // goal id
+
   const [newGoal, setNewGoal] = useState({
     title: '',
     description: '',
@@ -16,25 +28,43 @@ const Goals = () => {
     target_date: '',
     milestones: []
   });
-  const [newMilestone, setNewMilestone] = useState('');
 
-  useEffect(() => {
-    fetchGoals();
-  }, [filter]);
+  const [milestoneInput, setMilestoneInput] = useState('');
 
   const fetchGoals = async () => {
     try {
-      const response = await apiHelpers.getGoals(filter === 'all' ? null : filter);
-      setGoals(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch goals:', error);
+      setLoading(true);
+      const res = await apiHelpers.getGoals(filter === 'all' ? null : filter);
+      setGoals(res.data || []);
+    } catch (err) {
+      console.error('Fetch goals error:', err);
       toast.error('Failed to load goals');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddGoal = async (e) => {
+  useEffect(() => {
+    fetchGoals();
+  }, [filter]);
+
+  const handleAddMilestone = () => {
+    if (!milestoneInput.trim()) return;
+    setNewGoal(prev => ({
+      ...prev,
+      milestones: [...prev.milestones, { title: milestoneInput.trim(), completed: false }]
+    }));
+    setMilestoneInput('');
+  };
+
+  const handleRemoveMilestone = (idx) => {
+    setNewGoal(prev => ({
+      ...prev,
+      milestones: prev.milestones.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleCreateGoal = async (e) => {
     e.preventDefault();
     if (!newGoal.title.trim()) {
       toast.error('Goal title is required');
@@ -43,352 +73,312 @@ const Goals = () => {
 
     try {
       await apiHelpers.createGoal(newGoal);
-      toast.success('Goal created successfully');
+      toast.success('🎉 Goal established!');
       setNewGoal({ title: '', description: '', category: 'personal', target_date: '', milestones: [] });
       setShowAddForm(false);
       fetchGoals();
-    } catch (error) {
+    } catch (err) {
       toast.error('Failed to create goal');
     }
   };
 
-  const toggleMilestone = async (goalId, milestoneIndex) => {
-    const goal = goals.find(g => g.id === goalId || g._id === goalId);
-    if (!goal) return;
-
+  const handleToggleMilestone = async (goal, milestoneIdx) => {
+    const goalId = goal._id || goal.id;
     const updatedMilestones = [...goal.milestones];
-    updatedMilestones[milestoneIndex] = {
-      ...updatedMilestones[milestoneIndex],
-      completed: !updatedMilestones[milestoneIndex].completed,
-      completed_at: !updatedMilestones[milestoneIndex].completed ? new Date() : null
-    };
-
-    const completedCount = updatedMilestones.filter(m => m.completed).length;
-    const progress = Math.round((completedCount / updatedMilestones.length) * 100);
+    updatedMilestones[milestoneIdx].completed = !updatedMilestones[milestoneIdx].completed;
 
     try {
-      await apiHelpers.updateGoal(goal.id || goal._id, { 
-        milestones: updatedMilestones,
-        progress
-      });
-      toast.success('Milestone updated');
+      await apiHelpers.updateGoal(goalId, { milestones: updatedMilestones });
       fetchGoals();
-    } catch (error) {
+    } catch (err) {
       toast.error('Failed to update milestone');
     }
   };
 
-  const completeGoal = async (goalId) => {
+  const handleBreakdownWithAI = async (goal) => {
+    const goalId = goal._id || goal.id;
+    setBreakingDown(goalId);
     try {
-      await apiHelpers.updateGoal(goalId, { 
-        status: 'completed',
-        completed_at: new Date(),
-        progress: 100
-      });
-      toast.success('🎉 Goal completed! Congratulations!');
+      const res = await apiHelpers.breakdownGoal(goal.title, goal.category);
+      const { milestones, suggestedTasks } = res.data;
+
+      // Update goal milestones
+      await apiHelpers.updateGoal(goalId, { milestones });
+
+      // Automatically add suggested tasks to user tasks list
+      if (suggestedTasks && suggestedTasks.length > 0) {
+        for (const st of suggestedTasks) {
+          await apiHelpers.createTask({
+            title: st.title,
+            priority: st.priority || 'medium',
+            category: 'personal',
+            goal_id: goalId
+          });
+        }
+      }
+
+      toast.success('✨ AI generated 4 milestones & action tasks!');
       fetchGoals();
-    } catch (error) {
-      toast.error('Failed to complete goal');
+    } catch (err) {
+      toast.error('AI breakdown failed');
+    } finally {
+      setBreakingDown(null);
     }
   };
 
-  const deleteGoal = async (goalId, goalTitle) => {
-    if (!window.confirm(`Delete goal "${goalTitle}"?`)) return;
+  const handleDeleteGoal = async (goal) => {
+    const goalId = goal._id || goal.id;
+    if (!window.confirm(`Delete goal "${goal.title}"?`)) return;
 
     try {
       await apiHelpers.deleteGoal(goalId);
       toast.success('Goal deleted');
       fetchGoals();
-    } catch (error) {
+    } catch (err) {
       toast.error('Failed to delete goal');
     }
   };
 
-  const addMilestone = () => {
-    if (!newMilestone.trim()) return;
-    setNewGoal(prev => ({
-      ...prev,
-      milestones: [...prev.milestones, { title: newMilestone, completed: false }]
-    }));
-    setNewMilestone('');
-  };
-
-  const removeMilestone = (index) => {
-    setNewGoal(prev => ({
-      ...prev,
-      milestones: prev.milestones.filter((_, i) => i !== index)
-    }));
-  };
-
-  if (loading) {
-    return <LoadingSpinner text="Loading your goals..." />;
-  }
-
-  const categories = [
-    { value: 'health', label: '🏃 Health', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-    { value: 'career', label: '💼 Career', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-    { value: 'personal', label: '🌟 Personal', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
-    { value: 'financial', label: '💰 Financial', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
-    { value: 'relationships', label: '❤️ Relationships', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' },
-    { value: 'learning', label: '📚 Learning', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' },
-    { value: 'other', label: '📌 Other', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' }
-  ];
-
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+      
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Goals</h1>
-          <p className="text-gray-600 dark:text-gray-400">Set and track your long-term objectives</p>
+          <div className="flex items-center space-x-2">
+            <Target className="w-6 h-6 text-purple-500" />
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+              Personal Goals & Milestones
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Turn broad aspirations into concrete, achievable milestones with AI action steps
+          </p>
         </div>
+
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="btn-primary flex items-center space-x-2 floating accent-dot"
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1.5 transition-all self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Goal</span>
+          <span>{showAddForm ? 'Cancel' : 'New Goal'}</span>
         </button>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex space-x-2 mb-6">
-        {['active', 'completed', 'all'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === status
-                ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </button>
-        ))}
       </div>
 
       {/* Add Goal Form */}
       {showAddForm && (
-        <div className="card mb-6 fade-in-up accent-dot">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Create New Goal</h3>
-          <form onSubmit={handleAddGoal} className="space-y-4">
+        <form onSubmit={handleCreateGoal} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-lg space-y-4 animate-fade-in text-xs">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Create New Goal</h3>
+
+          <div>
+            <label className="font-semibold block mb-1">Goal Title</label>
             <input
               type="text"
-              placeholder="Goal title"
+              placeholder="e.g. Run a 5K race, Read 12 books, Learn Python..."
               value={newGoal.title}
-              onChange={(e) => setNewGoal(prev => ({ ...prev, title: e.target.value }))}
-              className="input-field"
+              onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              required
             />
-            <textarea
-              placeholder="Description (optional)"
-              value={newGoal.description}
-              onChange={(e) => setNewGoal(prev => ({ ...prev, description: e.target.value }))}
-              className="input-field h-20 resize-none"
-            />
-            <div className="grid grid-cols-2 gap-4">
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold block mb-1">Category</label>
               <select
                 value={newGoal.category}
-                onChange={(e) => setNewGoal(prev => ({ ...prev, category: e.target.value }))}
-                className="input-field"
+                onChange={(e) => setNewGoal({ ...newGoal, category: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
               >
-                {categories.map(cat => (
-                  <option key={cat.value} value={cat.value}>{cat.label}</option>
-                ))}
+                <option value="health">Health & Wellness</option>
+                <option value="career">Career & Work</option>
+                <option value="learning">Learning & Skills</option>
+                <option value="financial">Financial</option>
+                <option value="relationships">Relationships</option>
+                <option value="personal">Personal Growth</option>
               </select>
+            </div>
+
+            <div>
+              <label className="font-semibold block mb-1">Target Completion Date</label>
               <input
                 type="date"
                 value={newGoal.target_date}
-                onChange={(e) => setNewGoal(prev => ({ ...prev, target_date: e.target.value }))}
-                className="input-field"
+                onChange={(e) => setNewGoal({ ...newGoal, target_date: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
               />
             </div>
+          </div>
 
-            {/* Milestones */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Milestones (optional)
-              </label>
-              <div className="flex space-x-2 mb-2">
-                <input
-                  type="text"
-                  placeholder="Add a milestone"
-                  value={newMilestone}
-                  onChange={(e) => setNewMilestone(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMilestone())}
-                  className="input-field flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={addMilestone}
-                  className="btn-secondary"
-                >
-                  Add
-                </button>
-              </div>
-              {newGoal.milestones.length > 0 && (
-                <ul className="space-y-1">
-                  {newGoal.milestones.map((milestone, index) => (
-                    <li key={index} className="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded">
-                      <span className="text-gray-700 dark:text-gray-300">{milestone.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeMilestone(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="flex space-x-3 pt-2">
-              <button type="submit" className="btn-primary floating">Create Goal</button>
+          <div>
+            <label className="font-semibold block mb-1">Milestones</label>
+            <div className="flex space-x-2 mb-2">
+              <input
+                type="text"
+                placeholder="Add milestone step..."
+                value={milestoneInput}
+                onChange={(e) => setMilestoneInput(e.target.value)}
+                className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              />
               <button
                 type="button"
-                onClick={() => setShowAddForm(false)}
-                className="btn-secondary hover:scale-105 transition-transform duration-200"
+                onClick={handleAddMilestone}
+                className="px-3 py-1.5 bg-gray-200 dark:bg-gray-800 font-bold rounded-xl"
               >
-                Cancel
+                + Add
               </button>
             </div>
-          </form>
-        </div>
-      )}
 
-      {/* Goals List */}
-      <div className="space-y-4">
-        {goals.length === 0 ? (
-          <div className="text-center py-12 card accent-dot fade-in-up">
-            <Target className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4 gentle-float" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              No goals yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Set your first goal and start working towards your dreams
-            </p>
+            <div className="space-y-1">
+              {newGoal.milestones.map((m, i) => (
+                <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg text-xs">
+                  <span>{i + 1}. {m.title}</span>
+                  <button type="button" onClick={() => handleRemoveMilestone(i)} className="text-red-500 font-bold">×</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2">
             <button
-              onClick={() => setShowAddForm(true)}
-              className="btn-primary floating"
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 text-gray-500 rounded-xl hover:bg-gray-100"
             >
-              Create Your First Goal
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl"
+            >
+              Save Goal
             </button>
           </div>
-        ) : (
-          goals.map((goal, index) => {
-            const category = categories.find(c => c.value === goal.category);
-            const completedMilestones = goal.milestones?.filter(m => m.completed).length || 0;
-            const totalMilestones = goal.milestones?.length || 0;
-            const progress = goal.progress || 0;
+        </form>
+      )}
 
+      {/* Filter Tabs */}
+      <div className="flex items-center space-x-2 bg-white dark:bg-gray-900 p-2 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs text-xs">
+        {['active', 'completed', 'all'].map((st) => (
+          <button
+            key={st}
+            onClick={() => setFilter(st)}
+            className={`px-3.5 py-1.5 rounded-xl font-bold capitalize transition-colors ${
+              filter === st
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            {st}
+          </button>
+        ))}
+      </div>
+
+      {/* Goal Cards */}
+      {loading ? (
+        <LoadingSpinner text="Loading your goals..." />
+      ) : goals.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+          <Target className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">No goals found</p>
+          <p className="text-xs text-gray-400 mt-1">Start by creating an inspiring goal.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {goals.map((goal) => {
+            const goalId = goal._id || goal.id;
+            const isBreaking = breakingDown === goalId;
             return (
               <div
-                key={goal.id || goal._id}
-                className="card fade-in-up accent-dot hover:scale-[1.01] transition-all duration-300"
-                style={{ animationDelay: `${index * 100}ms` }}
+                key={goalId}
+                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 p-5 shadow-xs space-y-4"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className={`text-lg font-semibold ${
-                        goal.status === 'completed' 
-                          ? 'line-through text-gray-500 dark:text-gray-400'
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}>
-                        {goal.title}
-                      </h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${category?.color}`}>
-                        {category?.label}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300">
+                        {goal.category}
                       </span>
-                      {goal.status === 'completed' && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          ✓ Completed
+                      {goal.target_date && (
+                        <span className="text-[11px] text-gray-400">
+                          Target: {new Date(goal.target_date).toLocaleDateString()}
                         </span>
                       )}
                     </div>
-                    {goal.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {goal.description}
-                      </p>
-                    )}
-                    {goal.target_date && (
-                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-                        <Calendar className="w-4 h-4 mr-1.5" />
-                        <span>Target: {new Date(goal.target_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-
-                    {/* Progress Bar */}
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{progress}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gray-900 dark:bg-gray-100 transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Milestones */}
-                    {totalMilestones > 0 && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Milestones ({completedMilestones}/{totalMilestones})
-                        </p>
-                        <ul className="space-y-1">
-                          {goal.milestones.map((milestone, mIndex) => (
-                            <li
-                              key={mIndex}
-                              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded transition-colors"
-                              onClick={() => goal.status !== 'completed' && toggleMilestone(goal.id || goal._id, mIndex)}
-                            >
-                              {milestone.completed ? (
-                                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                              ) : (
-                                <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              )}
-                              <span className={`text-sm ${
-                                milestone.completed
-                                  ? 'line-through text-gray-500 dark:text-gray-400'
-                                  : 'text-gray-700 dark:text-gray-300'
-                              }`}>
-                                {milestone.title}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white mt-1">
+                      {goal.title}
+                    </h3>
                   </div>
 
-                  <div className="flex flex-col space-y-2 ml-4">
-                    {goal.status !== 'completed' && (
-                      <button
-                        onClick={() => completeGoal(goal.id || goal._id)}
-                        className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-all"
-                        title="Mark as completed"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </button>
-                    )}
+                  <div className="flex items-center space-x-2 self-end sm:self-center">
                     <button
-                      onClick={() => deleteGoal(goal.id || goal._id, goal.title)}
-                      className="p-2 text-gray-400 hover:text-red-500 transition-all rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="Delete goal"
+                      onClick={() => handleBreakdownWithAI(goal)}
+                      disabled={isBreaking}
+                      className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1.5 transition-all disabled:opacity-50"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Sparkles className={`w-3.5 h-3.5 ${isBreaking ? 'animate-spin' : ''}`} />
+                      <span>{isBreaking ? 'Breaking down...' : 'Break Down with AI'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteGoal(goal)}
+                      className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
+
+                {/* Progress bar */}
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                    <span>Progress</span>
+                    <span>{goal.progress || 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                      style={{ width: `${goal.progress || 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Milestones list */}
+                {goal.milestones && goal.milestones.length > 0 && (
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-1.5">
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                      Milestones
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {goal.milestones.map((m, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => handleToggleMilestone(goal, idx)}
+                          className={`p-2.5 rounded-xl border text-xs flex items-center space-x-2.5 cursor-pointer transition-colors ${
+                            m.completed 
+                              ? 'bg-purple-50/60 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800/60 text-purple-900 dark:text-purple-300' 
+                              : 'bg-gray-50/70 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/60 text-gray-800 dark:text-gray-200'
+                          }`}
+                        >
+                          {m.completed ? (
+                            <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-400 shrink-0" />
+                          )}
+                          <span className={`truncate ${m.completed ? 'line-through text-gray-400' : ''}`}>
+                            {m.title}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
+
     </div>
   );
 };

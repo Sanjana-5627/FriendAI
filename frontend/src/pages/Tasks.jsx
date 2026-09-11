@@ -1,35 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { apiHelpers } from '../utils/api';
-import { CheckSquare, Plus, Calendar, Trash2, Sparkles } from 'lucide-react';
+import { 
+  CheckSquare, 
+  Plus, 
+  Calendar, 
+  Trash2, 
+  Circle, 
+  CheckCircle2, 
+  AlertCircle, 
+  Filter, 
+  Tag, 
+  Target
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('active'); // active, completed, all
+  const [filterCategory, setFilterCategory] = useState('all');
+
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     due_date: '',
-    priority: 'medium'
+    priority: 'medium',
+    category: 'personal',
+    goal_id: ''
   });
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchTasks = async () => {
+  const fetchTasksAndGoals = async () => {
     try {
-      const response = await apiHelpers.getTasks();
-      setTasks(response.data || []);
+      setLoading(true);
+      const [tasksRes, goalsRes] = await Promise.all([
+        apiHelpers.getTasks(),
+        apiHelpers.getGoals('active')
+      ]);
+      setTasks(tasksRes.data || []);
+      setGoals(goalsRes.data || []);
     } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      console.error('Fetch tasks error:', error);
       toast.error('Failed to load tasks');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchTasksAndGoals();
+  }, []);
 
   const handleAddTask = async (e) => {
     e.preventDefault();
@@ -39,319 +61,318 @@ const Tasks = () => {
     }
 
     try {
-      await apiHelpers.createTask(newTask);
+      await apiHelpers.createTask({
+        ...newTask,
+        goal_id: newTask.goal_id || null
+      });
       toast.success('Task created successfully');
-      setNewTask({ title: '', description: '', due_date: '', priority: 'medium' });
+      setNewTask({
+        title: '',
+        description: '',
+        due_date: '',
+        priority: 'medium',
+        category: 'personal',
+        goal_id: ''
+      });
       setShowAddForm(false);
-      fetchTasks();
+      fetchTasksAndGoals();
     } catch (error) {
       toast.error('Failed to create task');
     }
   };
 
-  const toggleTask = async (task, completed) => {
+  const handleToggleTask = async (task) => {
+    const id = task._id || task.id;
     try {
-      // Use _id or id field from task object
-      const id = task._id || task.id;
-      if (!id) {
-        console.error('Task has no ID:', task);
-        toast.error('Invalid task ID');
-        return;
-      }
-      await apiHelpers.updateTask(id, { completed: !completed });
-      toast.success(completed ? 'Task unmarked' : '✓ Task completed!');
-      fetchTasks();
+      await apiHelpers.updateTask(id, { completed: !task.completed });
+      toast.success(!task.completed ? '✓ Task completed!' : 'Task uncompleted');
+      fetchTasksAndGoals();
     } catch (error) {
-      console.error('Failed to update task:', error);
-      toast.error('Failed to update task');
+      toast.error('Failed to update task status');
     }
   };
 
-  const deleteTask = async (task, taskTitle) => {
-    // Create a custom confirmation dialog
-    const isCompleted = window.confirm(
-      `🎉 Did you complete "${taskTitle}"?\n\n` +
-      `✅ Click "OK" if you COMPLETED this task\n` +
-      `   (This will count towards your achievements!)\n\n` +
-      `❌ Click "Cancel" if you want to remove it WITHOUT marking as completed`
-    );
-    
-    // If user clicked Cancel on the first dialog, ask if they want to delete anyway
-    if (!isCompleted) {
-      const shouldDelete = window.confirm(
-        `🗑️ Delete "${taskTitle}" without completing it?\n\n` +
-        `This will permanently remove the task.\n\n` +
-        `Click "OK" to delete, "Cancel" to keep the task.`
-      );
-      if (!shouldDelete) return; // User doesn't want to delete at all
-    }
-    
+  const handleDeleteTask = async (task) => {
+    const id = task._id || task.id;
+    if (!window.confirm(`Delete task "${task.title}"?`)) return;
+
     try {
-      // Use _id or id field from task object
-      const id = task._id || task.id;
-      if (!id) {
-        console.error('Task has no ID:', task);
-        toast.error('Invalid task ID');
-        return;
-      }
-      
-      // If task is being marked as completed, update it first
-      if (isCompleted) {
-        await apiHelpers.updateTask(id, { 
-          completed: true,
-          completed_at: new Date().toISOString()
-        });
-        toast.success('🎉 Task completed! Great job!');
-        // Small delay to show the completion message
-        setTimeout(async () => {
-          await apiHelpers.deleteTask(id);
-          toast.success('Task archived successfully');
-          fetchTasks();
-        }, 1000);
-      } else {
-        // Just delete without marking as completed
-        await apiHelpers.deleteTask(id);
-        toast.success('Task deleted');
-        fetchTasks();
-      }
+      await apiHelpers.deleteTask(id);
+      toast.success('Task deleted');
+      fetchTasksAndGoals();
     } catch (error) {
-      console.error('Failed to delete task:', error);
       toast.error('Failed to delete task');
     }
   };
 
-  // Smart task suggestions based on time of day
-  const getTaskSuggestions = () => {
-    const hour = new Date().getHours();
-    
-    if (hour >= 5 && hour < 12) {
-      // Morning suggestions
-      return [
-        { title: 'Morning meditation or stretching', priority: 'medium' },
-        { title: 'Review today\'s priorities', priority: 'high' },
-        { title: 'Healthy breakfast', priority: 'medium' },
-        { title: 'Check and respond to important emails', priority: 'high' }
-      ];
-    } else if (hour >= 12 && hour < 17) {
-      // Afternoon suggestions
-      return [
-        { title: 'Complete most important task of the day', priority: 'high' },
-        { title: 'Take a short break and walk', priority: 'medium' },
-        { title: 'Review progress on current projects', priority: 'medium' },
-        { title: 'Schedule tomorrow\'s priorities', priority: 'low' }
-      ];
-    } else if (hour >= 17 && hour < 22) {
-      // Evening suggestions
-      return [
-        { title: 'Wrap up work for the day', priority: 'medium' },
-        { title: 'Plan tomorrow\'s tasks', priority: 'high' },
-        { title: 'Exercise or physical activity', priority: 'medium' },
-        { title: 'Quality time with family/friends', priority: 'high' }
-      ];
-    } else {
-      // Night/Late suggestions
-      return [
-        { title: 'Prepare for tomorrow', priority: 'medium' },
-        { title: 'Evening wind-down routine', priority: 'high' },
-        { title: 'Read or journal', priority: 'low' },
-        { title: 'Get 7-8 hours of sleep', priority: 'high' }
-      ];
+  const filteredTasks = tasks.filter(task => {
+    if (filterStatus === 'active' && task.completed) return false;
+    if (filterStatus === 'completed' && !task.completed) return false;
+    if (filterCategory !== 'all' && task.category !== filterCategory) return false;
+    return true;
+  });
+
+  const getPriorityBadge = (priority) => {
+    switch (priority) {
+      case 'urgent':
+        return 'bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200';
+      case 'high':
+        return 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200';
+      case 'low':
+        return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200';
+      default:
+        return 'bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200';
     }
   };
-
-  const addSuggestedTask = async (suggestion) => {
-    try {
-      await apiHelpers.createTask(suggestion);
-      toast.success('✓ Task added!');
-      fetchTasks();
-    } catch (error) {
-      toast.error('Failed to add task');
-    }
-  };
-
-  if (loading) {
-    return <LoadingSpinner text="Loading your tasks..." />;
-  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+      
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-900 p-5 sm:p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your daily tasks and goals</p>
+          <div className="flex items-center space-x-2">
+            <CheckSquare className="w-6 h-6 text-indigo-500" />
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+              Actionable Tasks
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Prioritize your day, connect tasks to long-term goals, and maintain clarity
+          </p>
         </div>
+
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="btn-primary flex items-center space-x-2 floating accent-dot"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1.5 transition-all self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Task</span>
+          <span>{showAddForm ? 'Cancel' : 'New Task'}</span>
         </button>
       </div>
 
       {/* Add Task Form */}
       {showAddForm && (
-        <div className="card mb-6 fade-in-up accent-dot">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Create New Task</h3>
-          <form onSubmit={handleAddTask} className="space-y-4">
+        <form onSubmit={handleAddTask} className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-lg space-y-4 animate-fade-in text-xs">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Create New Task</h3>
+          
+          <div>
+            <label className="font-semibold block mb-1">Task Title</label>
             <input
               type="text"
-              placeholder="Task title"
+              placeholder="What needs to be done?"
               value={newTask.title}
-              onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-              className="input-field"
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              required
             />
+          </div>
+
+          <div>
+            <label className="font-semibold block mb-1">Description (Optional)</label>
             <textarea
-              placeholder="Description (optional)"
+              rows={2}
+              placeholder="Add key details or links..."
               value={newTask.description}
-              onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-              className="input-field h-20 resize-none"
+              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
             />
-            <div className="grid grid-cols-2 gap-4">
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className="font-semibold block mb-1">Priority</label>
+              <select
+                value={newTask.priority}
+                onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-semibold block mb-1">Category</label>
+              <select
+                value={newTask.category}
+                onChange={(e) => setNewTask({ ...newTask, category: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
+              >
+                <option value="personal">Personal</option>
+                <option value="work">Work</option>
+                <option value="study">Study</option>
+                <option value="wellness">Wellness</option>
+                <option value="chores">Chores</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-semibold block mb-1">Due Date</label>
               <input
                 type="date"
                 value={newTask.due_date}
-                onChange={(e) => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
-                className="input-field"
+                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
               />
+            </div>
+
+            <div>
+              <label className="font-semibold block mb-1">Link to Goal (Optional)</label>
               <select
-                value={newTask.priority}
-                onChange={(e) => setNewTask(prev => ({ ...prev, priority: e.target.value }))}
-                className="input-field"
+                value={newTask.goal_id}
+                onChange={(e) => setNewTask({ ...newTask, goal_id: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-xl"
               >
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="high">High Priority</option>
+                <option value="">No goal linked</option>
+                {goals.map(g => (
+                  <option key={g._id || g.id} value={g._id || g.id}>{g.title}</option>
+                ))}
               </select>
             </div>
-            <div className="flex space-x-3 pt-2">
-              <button type="submit" className="btn-primary floating">Create Task</button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="btn-secondary hover:scale-105 transition-transform duration-200"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Smart Task Suggestions */}
-      {!showAddForm && tasks.length < 10 && (
-        <div className="card mb-6 fade-in-up accent-dot bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
-          <div className="flex items-center space-x-2 mb-4">
-            <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Suggested Tasks for {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : new Date().getHours() < 22 ? 'Evening' : 'Tonight'}
-            </h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {getTaskSuggestions().map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => addSuggestedTask(suggestion)}
-                className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-md text-left"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {suggestion.title}
-                  </p>
-                  <p className={`text-xs mt-1 font-medium ${
-                    suggestion.priority === 'high' ? 'text-red-600 dark:text-red-400' :
-                    suggestion.priority === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
-                    'text-green-600 dark:text-green-400'
-                  }`}>
-                    {suggestion.priority} priority
-                  </p>
-                </div>
-                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 ml-2" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Tasks List */}
-      <div className="space-y-4">
-        {tasks.length === 0 ? (
-          <div className="text-center py-12 card accent-dot fade-in-up">
-            <CheckSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4 gentle-float" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              No tasks yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Create your first task to get started with productivity tracking
-            </p>
+          <div className="flex justify-end space-x-2 pt-2">
             <button
-              onClick={() => setShowAddForm(true)}
-              className="btn-primary floating"
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 text-gray-500 rounded-xl hover:bg-gray-100"
             >
-              Add Your First Task
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
+            >
+              Save Task
             </button>
           </div>
-        ) : (
-          tasks.map((task, index) => (
-            <div 
-              key={task.id || `task-${index}`} 
-              className="card fade-in-up accent-dot hover:scale-[1.02] transition-all duration-300"
-              style={{ animationDelay: `${index * 100}ms` }}
+        </form>
+      )}
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs text-xs">
+        <div className="flex items-center space-x-1.5">
+          {['active', 'completed', 'all'].map((st) => (
+            <button
+              key={st}
+              onClick={() => setFilterStatus(st)}
+              className={`px-3 py-1.5 rounded-xl font-bold capitalize transition-colors ${
+                filterStatus === st
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
             >
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => toggleTask(task, task.completed)}
-                  className={`p-2 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 shadow-md hover:shadow-lg ${
-                    task.completed
-                      ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-200 dark:shadow-green-800/30'
-                      : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  <CheckSquare className="w-4 h-4" />
-                </button>
-                
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-1">
-                    <h3 className={`font-medium transition-all duration-200 ${
-                      task.completed 
-                        ? 'line-through text-gray-500 dark:text-gray-400'
-                        : 'text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200'
-                    }`}>
+              {st}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <span className="text-gray-400">Category:</span>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-2 py-1 bg-gray-50 dark:bg-gray-800 border rounded-xl font-medium"
+          >
+            <option value="all">All Categories</option>
+            <option value="personal">Personal</option>
+            <option value="work">Work</option>
+            <option value="study">Study</option>
+            <option value="wellness">Wellness</option>
+            <option value="chores">Chores</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Task List */}
+      {loading ? (
+        <LoadingSpinner text="Loading tasks..." />
+      ) : filteredTasks.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+          <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">No tasks in this view</p>
+          <p className="text-xs text-gray-400 mt-1">Add a task or change your filter selection.</p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {filteredTasks.map((task) => {
+            const id = task._id || task.id;
+            const isDone = task.completed;
+            const isOverdue = task.isOverdue;
+
+            return (
+              <div
+                key={id}
+                className={`p-4 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                  isDone 
+                    ? 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800 opacity-60'
+                    : isOverdue
+                    ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60'
+                    : 'bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 shadow-xs hover:border-indigo-200'
+                }`}
+              >
+                <div className="flex items-start space-x-3.5 flex-1 min-w-0">
+                  <button
+                    onClick={() => handleToggleTask(task)}
+                    className="mt-0.5 text-gray-400 hover:text-indigo-600 transition-colors shrink-0"
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    ) : (
+                      <Circle className="w-5 h-5" />
+                    )}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getPriorityBadge(task.priority)}`}>
+                        {task.priority}
+                      </span>
+                      <span className="text-[11px] font-medium text-gray-400 capitalize">
+                        • {task.category}
+                      </span>
+                      {isOverdue && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white">
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className={`text-sm font-bold mt-1 text-gray-900 dark:text-white ${isDone ? 'line-through text-gray-400' : ''}`}>
                       {task.title}
                     </h3>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
-                      task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800' :
-                      task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-800' :
-                      'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800'
-                    }`}>
-                      {task.priority}
-                    </div>
+
+                    {task.description && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                        {task.description}
+                      </p>
+                    )}
+
+                    {task.due_date && (
+                      <div className="flex items-center space-x-1 text-[11px] text-gray-400 mt-2">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
                   </div>
-                  {task.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {task.description}
-                    </p>
-                  )}
-                  {task.due_date && (
-                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/50">
-                      <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                      <span className="font-medium">{new Date(task.due_date).toLocaleDateString()}</span>
-                    </div>
-                  )}
                 </div>
-                
+
                 <button
-                  onClick={() => deleteTask(task, task.title)}
-                  className="p-2 text-gray-400 hover:text-red-500 transition-all duration-200 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-110 active:scale-95 hover:shadow-md"
+                  onClick={() => handleDeleteTask(task)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   title="Delete task"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
+
     </div>
   );
 };

@@ -2,399 +2,466 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiHelpers } from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import CheckInModal from '../components/CheckInModal';
 import { 
-  MessageSquare, CheckSquare, Target, Zap, 
-  TrendingUp, Calendar, ArrowRight, Flame,
-  Brain, Heart, Sparkles, Award, Clock
+  Sparkles, 
+  Flame, 
+  Heart, 
+  Target, 
+  Zap, 
+  CheckSquare, 
+  Calendar, 
+  ArrowRight, 
+  Compass, 
+  Clock, 
+  Users, 
+  AlertCircle,
+  TrendingUp,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-  const [dashboardData, setDashboardData] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const response = await apiHelpers.getDashboard();
-        setDashboardData(response.data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-        toast.error('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
-
-  if (loading) {
-    return <LoadingSpinner text="Loading your dashboard..." />;
-  }
-
-  const stats = dashboardData?.stats || {
-    totalSessions: 0,
-    currentStreak: 0,
-    averageMood: 0,
-    completedTasks: 0,
-    activeGoals: 0,
-    activeHabits: 0,
-    habitsCompletedToday: 0,
-    goalProgress: 0
-  };
-
-  const insights = dashboardData?.insights || [];
-  const activeGoals = dashboardData?.activeGoals || [];
-  const todayHabits = dashboardData?.todayHabits || [];
-  const upcomingTasks = dashboardData?.upcomingTasks || [];
-  const recentEntries = dashboardData?.recentEntries || [];
-
-  const getInsightColor = (type) => {
-    switch (type) {
-      case 'positive':
-      case 'achievement':
-        return 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 dark:from-green-900/20 dark:to-emerald-900/20 dark:border-green-700';
-      case 'warning':
-        return 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 dark:from-yellow-900/20 dark:to-orange-900/20 dark:border-yellow-700';
-      case 'suggestion':
-      case 'reminder':
-        return 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-300 dark:from-blue-900/20 dark:to-cyan-900/20 dark:border-blue-700';
-      default:
-        return 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 dark:from-purple-900/20 dark:to-pink-900/20 dark:border-purple-700';
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      const res = await apiHelpers.getDashboard();
+      setData(res.data);
+    } catch (error) {
+      console.error('Dashboard fetch error:', error);
+      toast.error('Failed to refresh dashboard');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const isHabitCompletedToday = (habit) => {
-    if (!habit.completions || habit.completions.length === 0) return false;
-    const today = new Date().toISOString().split('T')[0];
-    return habit.completions.some(c => 
-      new Date(c.date).toISOString().split('T')[0] === today
-    );
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const handleToggleHabit = async (habitId, habitName, isCompleted) => {
+    if (isCompleted) {
+      toast('Habit already recorded for today! Keep up the streak.', { icon: '✨' });
+      return;
+    }
+    try {
+      await apiHelpers.completeHabit(habitId);
+      toast.success(`Completed "${habitName}"!`);
+      fetchDashboard();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not complete habit');
+    }
   };
+
+  const handleToggleTask = async (taskId, currentStatus) => {
+    try {
+      await apiHelpers.updateTask(taskId, { completed: !currentStatus });
+      toast.success(!currentStatus ? 'Task completed!' : 'Task uncompleted');
+      fetchDashboard();
+    } catch (error) {
+      toast.error('Failed to update task');
+    }
+  };
+
+  if (loading && !data) {
+    return <LoadingSpinner text="Assembling your personalized wellness dashboard..." />;
+  }
+
+  const wellnessScore = data?.wellnessScore || { total: 75, breakdown: {} };
+  const stats = data?.stats || {};
+  const socialHealth = data?.socialHealth || { level: 'Good', color: 'emerald', message: '' };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return '🌅 Good Morning';
-    if (hour < 17) return '☀️ Good Afternoon';
-    if (hour < 22) return '🌆 Good Evening';
-    return '🌙 Good Night';
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    if (hour < 22) return 'Good Evening';
+    return 'Restful Night';
   };
-
-  const getMotivationalQuote = () => {
-    const quotes = [
-      "Every day is a fresh start. Make it count! 💪",
-      "Small progress is still progress. Keep going! 🌟",
-      "You're doing better than you think! ✨",
-      "Consistency beats perfection. Stay committed! 🎯",
-      "Your future self will thank you! 🚀"
-    ];
-    return quotes[Math.floor(Math.random() * quotes.length)];
-  };
-
-  const hasData = stats.totalSessions > 0 || stats.activeGoals > 0 || stats.activeHabits > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-        {/* Welcome Section */}
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">
-            {getGreeting()}! 👋
-          </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400">
-            {getMotivationalQuote()}
+    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-950 px-3 sm:px-6 lg:px-8 py-5 max-w-7xl mx-auto space-y-6">
+      
+      {/* 1. Welcome & Greeting Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+        <div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xl sm:text-2xl">🌱</span>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              {getGreeting()}, {data?.greetingName || 'Friend'}
+            </h1>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+            "Consistency beats intensity. One small mindful action changes your whole trajectory."
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
-          <Link to="/chat" className="stat-card fade-in-up accent-dot hover:scale-105 active:scale-95 transition-all duration-300 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-orange-200 dark:border-orange-800">
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-orange-600 dark:text-orange-400" />
-                {stats.currentStreak > 0 && <Flame className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-orange-500" />}
-              </div>
-              <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">Journal Streak</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.currentStreak}
-              </p>
-              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5 sm:mt-1">days</p>
-            </div>
-          </Link>
+        <div className="flex items-center space-x-3">
+          {!data?.todayCheckInCompleted ? (
+            <button
+              onClick={() => setCheckInModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center space-x-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Complete Daily Check-In</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setCheckInModalOpen(true)}
+              className="px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-1.5"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Checked in today ({data?.todayCheckIn?.mood}/10)</span>
+            </button>
+          )}
 
-          <Link to="/mood" className="stat-card fade-in-up accent-dot hover:scale-105 active:scale-95 transition-all duration-300 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800" style={{animationDelay: '0.1s'}}>
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <Heart className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
-                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-blue-500" />
-              </div>
-              <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">Avg Mood</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.averageMood.toFixed(1)}
-              </p>
-              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5 sm:mt-1">out of 10</p>
-            </div>
+          <Link
+            to="/chat"
+            className="px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Chat Friend</span>
           </Link>
+        </div>
+      </div>
 
-          <Link to="/goals" className="stat-card fade-in-up accent-dot hover:scale-105 active:scale-95 transition-all duration-300 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800" style={{animationDelay: '0.2s'}}>
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <Target className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
-                <Award className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-purple-500" />
-              </div>
-              <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">Goal Progress</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.goalProgress}%
-              </p>
-              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5 sm:mt-1">{stats.activeGoals} active</p>
-            </div>
-          </Link>
+      {/* 2. Top Metric Cards: Wellness Score, Streak, Mood, Social Indicator */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        
+        {/* Wellness Score Card */}
+        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+            <span>Wellness Score</span>
+            <Sparkles className="w-4 h-4 text-indigo-500" />
+          </div>
+          <div className="my-2 flex items-baseline space-x-2">
+            <span className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400">
+              {wellnessScore.total}
+            </span>
+            <span className="text-xs text-gray-400 font-medium">/100</span>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-indigo-500 to-teal-400 h-full rounded-full transition-all duration-500"
+              style={{ width: `${wellnessScore.total}%` }}
+            ></div>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-2 truncate">
+            Mood, sleep, habits & connection
+          </p>
+        </div>
 
-          <Link to="/habits" className="stat-card fade-in-up accent-dot hover:scale-105 active:scale-95 transition-all duration-300 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800" style={{animationDelay: '0.3s'}}>
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600 dark:text-green-400" />
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-500" />
-              </div>
-              <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">Habits Today</p>
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.habitsCompletedToday}/{stats.activeHabits}
-              </p>
-              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500 mt-0.5 sm:mt-1">completed</p>
-            </div>
+        {/* Streak Card */}
+        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+            <span>Check-in Streak</span>
+            <Flame className="w-4 h-4 text-orange-500" />
+          </div>
+          <div className="my-2 flex items-baseline space-x-2">
+            <span className="text-3xl sm:text-4xl font-black text-orange-500">
+              {stats.currentStreak || 0}
+            </span>
+            <span className="text-xs text-gray-400 font-medium">consecutive days</span>
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            {stats.currentStreak >= 3 ? '🔥 Building incredible momentum!' : 'Check in daily to build your streak.'}
+          </p>
+        </div>
+
+        {/* Average Mood Card */}
+        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+            <span>Recent Average Mood</span>
+            <Heart className="w-4 h-4 text-rose-500" />
+          </div>
+          <div className="my-2 flex items-baseline space-x-2">
+            <span className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
+              {stats.averageMood || 7}
+            </span>
+            <span className="text-xs text-gray-400 font-medium">/ 10</span>
+          </div>
+          <Link to="/mood" className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center space-x-1 hover:underline">
+            <span>View 7-day trend</span>
+            <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
 
-        {/* AI Insights Section */}
-        {insights.length > 0 && (
-          <div className="mb-4 sm:mb-6">
-            <div className="flex items-center space-x-2 mb-3 sm:mb-4">
-              <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
-                AI Insights
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-              {insights.map((insight, index) => (
-                <div
-                  key={index}
-                  className={`p-3 sm:p-4 md:p-5 rounded-xl border-2 ${getInsightColor(insight.type)} fade-in-up shadow-sm hover:shadow-md transition-all duration-300`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="flex items-start space-x-2 sm:space-x-3">
-                    <span className="text-xl sm:text-2xl md:text-3xl flex-shrink-0">{insight.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-0.5 sm:mb-1 text-xs sm:text-sm md:text-base">
-                        {insight.title}
-                      </h3>
-                      <p className="text-[10px] sm:text-xs md:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        {insight.message}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Anti-Loneliness / Social Health */}
+        <div className="bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+            <span>Connection Health</span>
+            <Users className="w-4 h-4 text-purple-500" />
           </div>
-        )}
-
-        {/* Main Content Grid - Always show if there's data */}
-        {hasData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-            {/* Today's Habits */}
-            {todayHabits.length > 0 && (
-              <div className="card accent-dot fade-in-up">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
-                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Today's Habits
-                    </h3>
-                  </div>
-                  <Link to="/habits" className="text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center transition-colors">
-                    View all <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  </Link>
-                </div>
-                <div className="space-y-2">
-                  {todayHabits.map((habit) => {
-                    const completed = isHabitCompletedToday(habit);
-                    return (
-                      <div
-                        key={habit.id || habit._id}
-                        className={`flex items-center justify-between p-2 sm:p-3 rounded-lg transition-all duration-200 ${
-                          completed
-                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                            : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                          <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            completed ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}>
-                            {completed && <span className="text-[10px] sm:text-xs">✓</span>}
-                          </div>
-                          <span className={`text-xs sm:text-sm font-medium truncate ${
-                            completed ? 'text-gray-700 dark:text-gray-300 line-through' : 'text-gray-900 dark:text-gray-100'
-                          }`}>
-                            {habit.name}
-                          </span>
-                        </div>
-                        {habit.streak?.current > 0 && (
-                          <div className="flex items-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 ml-2">
-                            <Flame className="w-3 h-3 text-orange-500 mr-0.5 sm:mr-1" />
-                            {habit.streak.current}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Active Goals */}
-            {activeGoals.length > 0 && (
-              <div className="card accent-dot fade-in-up" style={{animationDelay: '0.1s'}}>
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
-                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Active Goals
-                    </h3>
-                  </div>
-                  <Link to="/goals" className="text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center transition-colors">
-                    View all <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  </Link>
-                </div>
-                <div className="space-y-2 sm:space-y-3">
-                  {activeGoals.map((goal) => (
-                    <div key={goal.id || goal._id} className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between mb-1 sm:mb-2">
-                        <h4 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 truncate flex-1">
-                          {goal.title}
-                        </h4>
-                        <span className="text-[10px] sm:text-xs font-semibold text-purple-600 dark:text-purple-400 ml-2">
-                          {goal.progress || 0}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 sm:h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
-                          style={{ width: `${goal.progress || 0}%` }}
-                        />
-                      </div>
-                      {goal.milestones && goal.milestones.length > 0 && (
-                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">
-                          {goal.milestones.filter(m => m.completed).length}/{goal.milestones.length} milestones
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Upcoming Tasks */}
-            {upcomingTasks.length > 0 && (
-              <div className="card accent-dot fade-in-up" style={{animationDelay: '0.2s'}}>
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
-                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Upcoming Tasks
-                    </h3>
-                  </div>
-                  <Link to="/tasks" className="text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center transition-colors">
-                    View all <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  </Link>
-                </div>
-                <div className="space-y-2">
-                  {upcomingTasks.map((task) => (
-                    <div
-                      key={task.id || task._id}
-                      className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                        <CheckSquare className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 truncate">
-                          {task.title}
-                        </span>
-                      </div>
-                      {task.due_date && (
-                        <div className="flex items-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 ml-2">
-                          <Calendar className="w-3 h-3 mr-0.5 sm:mr-1" />
-                          {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Journal Entries */}
-            {recentEntries.length > 0 && (
-              <div className="card accent-dot fade-in-up" style={{animationDelay: '0.3s'}}>
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="flex items-center space-x-2">
-                    <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 dark:text-orange-400" />
-                    <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Recent Thoughts
-                    </h3>
-                  </div>
-                  <Link to="/chat" className="text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center transition-colors">
-                    New entry <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  </Link>
-                </div>
-                <div className="space-y-2 sm:space-y-3">
-                  {recentEntries.slice(0, 3).map((entry, index) => (
-                    <div key={index} className="border-l-4 border-orange-300 dark:border-orange-600 pl-2 sm:pl-3 py-1 sm:py-2">
-                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">
-                        {new Date(entry.created_at).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 line-clamp-2 leading-relaxed">
-                        {entry.transcription.substring(0, 100)}...
-                      </p>
-                      <div className="flex items-center mt-1 sm:mt-2">
-                        <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                          Mood: {entry.mood_score}/10
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="my-2 flex items-center space-x-2">
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+              socialHealth.level === 'Good' 
+                ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
+            }`}>
+              {socialHealth.level}
+            </span>
           </div>
-        )}
+          <Link to="/explore" className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 flex items-center space-x-1 hover:underline">
+            <span>Connect & Explore</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
 
-        {/* Empty State */}
-        {!hasData && (
-          <div className="text-center py-8 sm:py-12 card accent-dot fade-in-up">
-            <div className="max-w-md mx-auto px-4">
-              <Sparkles className="w-12 h-12 sm:w-16 sm:h-16 text-purple-500 mx-auto mb-3 sm:mb-4" />
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 sm:mb-3">
-                Welcome to Your Wellness Journey! 🌟
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
-                Start by creating your first journal entry, setting a goal, or building a new habit.
-              </p>
-              <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 sm:gap-3">
-                <Link to="/chat" className="btn-primary text-sm sm:text-base">
-                  Start Journaling
-                </Link>
-                <Link to="/goals" className="btn-secondary text-sm sm:text-base">
-                  Set a Goal
-                </Link>
-                <Link to="/habits" className="btn-secondary text-sm sm:text-base">
-                  Build a Habit
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* 3. Main Dashboard Grid (2 columns: Left = Schedule & Tasks; Right = Habits, Goals, Insights) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        {/* LEFT COLUMN: 7 Cols */}
+        <div className="lg:col-span-7 space-y-5">
+          
+          {/* Today's Schedule Preview */}
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Today's Balanced Timetable</h3>
+              </div>
+              <Link to="/planner" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                Full Day View →
+              </Link>
+            </div>
+
+            {data?.todaySchedule && data.todaySchedule.length > 0 ? (
+              <div className="space-y-2.5">
+                {data.todaySchedule.map((item) => (
+                  <div 
+                    key={item.id}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-xs transition-colors ${
+                      item.completed 
+                        ? 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-800 line-through text-gray-400'
+                        : 'bg-gray-50/70 dark:bg-gray-800/60 border-gray-200/70 dark:border-gray-700/60 text-gray-800 dark:text-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-[11px] bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md">
+                        {item.time}
+                      </span>
+                      <span className="font-medium truncate max-w-[240px] sm:max-w-md">{item.title}</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800">
+                      {item.category}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-xs text-gray-400">
+                No timetable scheduled for today. <Link to="/planner" className="text-indigo-500 font-semibold underline">Generate one</Link>
+              </div>
+            )}
+          </div>
+
+          {/* Pending Tasks & Overdue Warnings */}
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <CheckSquare className="w-4 h-4 text-blue-500" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Priority Tasks</h3>
+              </div>
+              <Link to="/tasks" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                Manage All ({stats.pendingTasksCount || 0}) →
+              </Link>
+            </div>
+
+            {data?.upcomingTasks && data.upcomingTasks.length > 0 ? (
+              <div className="space-y-2">
+                {data.upcomingTasks.map((task) => {
+                  const id = task._id || task.id;
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60 text-xs"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleToggleTask(id, task.completed)}
+                          className="text-gray-400 hover:text-indigo-600 transition-colors"
+                        >
+                          <Circle className="w-4 h-4" />
+                        </button>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{task.title}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {task.priority === 'high' || task.priority === 'urgent' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
+                            {task.priority}
+                          </span>
+                        ) : null}
+                        <span className="text-[10px] text-gray-400 capitalize">{task.category}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 py-4 text-center">
+                All tasks are cleared! Take time to breathe or <Link to="/tasks" className="text-indigo-500 underline">add a new task</Link>.
+              </p>
+            )}
+          </div>
+
+          {/* AI Personalized Recommendations Card */}
+          {data?.recommendations && data.recommendations.length > 0 && (
+            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 shadow-xs">
+              <div className="flex items-center space-x-2 mb-3">
+                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Personalized Wellness Suggestion</h3>
+              </div>
+              <div className="space-y-3">
+                {data.recommendations.map((rec, i) => (
+                  <div key={i} className="p-3.5 bg-white/80 dark:bg-gray-900/80 rounded-xl border border-indigo-100 dark:border-indigo-900/30 text-xs">
+                    <h4 className="font-bold text-gray-900 dark:text-white mb-1">{rec.title}</h4>
+                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{rec.description}</p>
+                    <div className="mt-2.5 flex justify-end">
+                      <Link
+                        to="/explore"
+                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                      >
+                        Explore Activity Options →
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* RIGHT COLUMN: 5 Cols */}
+        <div className="lg:col-span-5 space-y-5">
+          
+          {/* Habits For Today Checklist */}
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Zap className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Daily Habits</h3>
+              </div>
+              <span className="text-xs font-semibold text-gray-500">
+                {stats.habitsCompletedToday || 0}/{stats.activeHabitsCount || 0} Done
+              </span>
+            </div>
+
+            {data?.todayHabits && data.todayHabits.length > 0 ? (
+              <div className="space-y-2">
+                {data.todayHabits.map((habit) => {
+                  const id = habit._id || habit.id;
+                  const isDone = (habit.completions || []).some(
+                    c => new Date(c.date).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+                  );
+                  return (
+                    <div
+                      key={id}
+                      onClick={() => handleToggleHabit(id, habit.name, isDone)}
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                        isDone
+                          ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                          : 'bg-gray-50/70 dark:bg-gray-800/60 border-gray-200/70 dark:border-gray-700/60 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-gray-400" />
+                        )}
+                        <span className={`font-medium ${isDone ? 'text-emerald-900 dark:text-emerald-200' : 'text-gray-800 dark:text-gray-200'}`}>
+                          {habit.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        <Flame className="w-3.5 h-3.5" />
+                        <span>{habit.streak?.current || 0}d</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 py-4 text-center">
+                No habits set yet. <Link to="/habits" className="text-indigo-500 underline font-semibold">Create one</Link>
+              </p>
+            )}
+          </div>
+
+          {/* Active Goals Progress */}
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Target className="w-4 h-4 text-purple-500" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Active Goals</h3>
+              </div>
+              <Link to="/goals" className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline">
+                View All →
+              </Link>
+            </div>
+
+            {data?.activeGoals && data.activeGoals.length > 0 ? (
+              <div className="space-y-3">
+                {data.activeGoals.map((goal) => (
+                  <div key={goal._id || goal.id} className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/60 border border-gray-200/70 dark:border-gray-700/60">
+                    <div className="flex justify-between items-center text-xs mb-1.5">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[200px]">{goal.title}</span>
+                      <span className="font-bold text-purple-600 dark:text-purple-400">{goal.progress || 0}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-purple-600 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${goal.progress || 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 py-3 text-center">
+                No active goals. <Link to="/goals" className="text-purple-500 underline font-semibold">Set a meaningful goal</Link>
+              </p>
+            )}
+          </div>
+
+          {/* AI Insights & Observations */}
+          {data?.insights && data.insights.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
+                <span>💡</span>
+                <span>Habit Insights</span>
+              </h3>
+              <div className="space-y-2.5">
+                {data.insights.map((insight, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-xs">
+                    <div className="flex items-center space-x-2 font-bold text-gray-900 dark:text-white mb-0.5">
+                      <span>{insight.icon}</span>
+                      <span>{insight.title}</span>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed mt-1">{insight.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+      </div>
+
+      <CheckInModal
+        isOpen={checkInModalOpen}
+        onClose={() => setCheckInModalOpen(false)}
+        onCheckInSuccess={fetchDashboard}
+      />
     </div>
   );
 };
