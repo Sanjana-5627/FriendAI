@@ -124,24 +124,6 @@ export const generateFallbackChatResponse = (userMessage, context = {}) => {
   };
 };
 
-/**
- * Breaks a goal into realistic milestones and action steps.
- */
-export const generateGoalBreakdown = (title, category = 'personal') => {
-  return {
-    milestones: [
-      { title: `Define specific scope and initial setup for "${title}"`, completed: false },
-      { title: "Complete initial 7 days of consistent practice", completed: false },
-      { title: "Review mid-way progress and adjust approach", completed: false },
-      { title: `Achieve target outcome for ${title}`, completed: false }
-    ],
-    suggestedTasks: [
-      { title: `Research best practices and tools for ${title}`, priority: 'medium' },
-      { title: `Dedicate 20 minutes to ${title} this week`, priority: 'high' },
-      { title: "Set up a recurring habit to support this goal", priority: 'medium' }
-    ]
-  };
-};
 
 /**
  * Generates an in-depth, empathetic "Day in Review & Reflection" from user's day description.
@@ -217,3 +199,71 @@ export const generateFallbackDayReview = (dayText, userProfile = {}, userName = 
     offlineMode: true
   };
 };
+
+/**
+ * Generates realistic chronological milestones and actionable initial tasks for any goal.
+ */
+export const generateGoalBreakdown = (title, category = 'personal') => {
+  const cleanTitle = (title || 'Personal Goal').trim();
+  const cat = (category || 'personal').toLowerCase();
+
+  let milestones = [];
+  let suggestedTasks = [];
+
+  if (cat === 'fitness' || cleanTitle.toLowerCase().includes('run') || cleanTitle.toLowerCase().includes('workout') || cleanTitle.toLowerCase().includes('gym')) {
+    milestones = [
+      { title: `Foundation: Complete baseline assessment & gear preparation for "${cleanTitle}"`, completed: false },
+      { title: `Consistency: Establish a regular 3-day weekly routine for 3 consecutive weeks`, completed: false },
+      { title: `Progression: Increase duration or intensity by 25% with proper recovery`, completed: false },
+      { title: `Achievement: Complete full milestone benchmark and celebrate consistency`, completed: false }
+    ];
+    suggestedTasks = [
+      { title: `Schedule workout days into weekly calendar`, priority: 'high' },
+      { title: `Prepare workout space/gear the night before`, priority: 'medium' },
+      { title: `Log initial baseline session and energy level`, priority: 'medium' }
+    ];
+  } else if (cat === 'career' || cat === 'learning' || cleanTitle.toLowerCase().includes('learn') || cleanTitle.toLowerCase().includes('study') || cleanTitle.toLowerCase().includes('project')) {
+    milestones = [
+      { title: `Discovery: Gather high-quality learning resources and define key deliverables for "${cleanTitle}"`, completed: false },
+      { title: `Core Sprint: Complete first major module or project prototype`, completed: false },
+      { title: `Refinement: Seek feedback, review key concepts, and polish rough edges`, completed: false },
+      { title: `Final Launch: Complete full project or certification and document learnings`, completed: false }
+    ];
+    suggestedTasks = [
+      { title: `Block dedicated 45-minute daily focus session`, priority: 'high' },
+      { title: `Curate top 3 resources/books/docs needed`, priority: 'medium' },
+      { title: `Create quick outline of project milestones`, priority: 'medium' }
+    ];
+  } else if (cat === 'mindfulness' || cleanTitle.toLowerCase().includes('meditat') || cleanTitle.toLowerCase().includes('peace') || cleanTitle.toLowerCase().includes('sleep')) {
+    milestones = [
+      { title: `Initiation: Set up a comfortable, distraction-free quiet corner`, completed: false },
+      { title: `Habit Anchor: Practice 5-10 minutes daily for 14 continuous days`, completed: false },
+      { title: `Deepening: Expand practice and introduce evening breathwork/reflection`, completed: false },
+      { title: `Integration: Feel natural mindfulness state during stressful moments`, completed: false }
+    ];
+    suggestedTasks = [
+      { title: `Download calming audio guide or timer app`, priority: 'high' },
+      { title: `Set a gentle evening wind-down alarm`, priority: 'medium' },
+      { title: `Write 1 sentence of gratitude after each session`, priority: 'medium' }
+    ];
+  } else {
+    // Universal personal/wellness template
+    milestones = [
+      { title: `Phase 1: Clarify vision, gather essentials, and break down scope for "${cleanTitle}"`, completed: false },
+      { title: `Phase 2: Build early momentum by completing 1st week of daily micro-steps`, completed: false },
+      { title: `Phase 3: Overcome initial friction and reach 50% milestone progress`, completed: false },
+      { title: `Phase 4: Finalize remaining targets and review personal transformation`, completed: false }
+    ];
+    suggestedTasks = [
+      { title: `Take the first 10-minute micro-action step today`, priority: 'high' },
+      { title: `Set up a daily reminder or habit tracker entry`, priority: 'medium' },
+      { title: `Share intention with a supportive friend or write in journal`, priority: 'medium' }
+    ];
+  }
+
+  return {
+    milestones,
+    suggestedTasks
+  };
+};
+

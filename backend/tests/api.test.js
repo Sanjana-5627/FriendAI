@@ -2,10 +2,9 @@
 // Tests Auth, User Isolation, Profile, Check-In, Tasks, Goals, Habits, Schedule, Recommendations, Export & Safety
 process.env.NODE_ENV = 'test';
 import assert from 'node:assert';
-import app from '../server.js';
+const { default: app } = await import('../server.js');
 
-// Bind server to an ephemeral available port to avoid port collision
-const server = app.listen(0);
+let server;
 
 const runTests = async () => {
   console.log('\n🧪 Starting FriendAI Backend Automated Test Suite...\n');
@@ -198,6 +197,23 @@ const runTests = async () => {
     assert.strictEqual(res.status, 400, 'Duplicate completion should be rejected');
   });
 
+  await test('Undo habit completion and restore streak', async () => {
+    const res = await request('POST', `/api/habits/${habitId}/undo`, {}, token1);
+    assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}`);
+    assert.strictEqual(res.data.streak.current, 0, 'Streak should be recalculated back to 0');
+  });
+
+  await test('AI Goal breakdown generates milestones and actionable tasks', async () => {
+    const res = await request('POST', '/api/ai/breakdown-goal', {
+      title: 'Learn Spanish for trip',
+      category: 'personal'
+    }, token1);
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.data.milestones), 'Must return milestones');
+    assert.ok(res.data.milestones.length >= 3, 'Must have at least 3 milestones');
+    assert.ok(Array.isArray(res.data.tasks), 'Must return starter tasks');
+  });
+
   // 6. Schedule & Timetable
   await test('Generate and retrieve daily timetable', async () => {
     const res = await request('GET', '/api/schedule', null, token1);
@@ -218,6 +234,14 @@ const runTests = async () => {
     assert.strictEqual(res.status, 200);
     assert.ok(Array.isArray(res.data));
     assert.ok(res.data.every(p => p.category === 'park'));
+  });
+
+  await test('Fetch places filtered by minCost, maxCost, and location', async () => {
+    const res = await request('GET', '/api/recommendations/places?minCost=5&maxCost=20&location=Downtown', null, token1);
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.data));
+    assert.ok(res.data.length > 0, 'Should match places in Downtown within cost range');
+    assert.ok(res.data.every(p => p.neighborhood === 'Downtown' && p.costAmount >= 5 && p.costAmount <= 20));
   });
 
   // 8. Safety & Crisis Intervention
@@ -285,8 +309,6 @@ const runTests = async () => {
   });
 };
 
-if (server.listening) {
+server = app.listen(0, () => {
   runTests();
-} else {
-  server.on('listening', runTests);
-}
+});

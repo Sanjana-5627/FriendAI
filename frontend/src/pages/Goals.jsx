@@ -104,10 +104,27 @@ const Goals = () => {
       const combined = [...(goal.milestones || []), ...newMilestones];
       await apiHelpers.updateGoal(goalId, { milestones: combined });
       
-      toast.success('✓ Generated AI action steps for this goal!');
+      // Auto-create initial suggested tasks if available
+      if (res.data.suggestedTasks && res.data.suggestedTasks.length > 0) {
+        for (const t of res.data.suggestedTasks) {
+          try {
+            await apiHelpers.createTask({
+              title: `${t.title} (${goal.title})`,
+              priority: t.priority || 'medium',
+              category: goal.category === 'fitness' ? 'fitness' : (goal.category === 'career' ? 'work' : 'wellness')
+            });
+          } catch (taskErr) {
+            // Ignore individual task error
+          }
+        }
+        toast.success(`✓ Added ${newMilestones.length} milestones & ${res.data.suggestedTasks.length} starter tasks!`);
+      } else {
+        toast.success(`✓ Generated ${newMilestones.length} AI action milestones!`);
+      }
       fetchGoals();
     } catch (err) {
-      toast.error('Failed to generate steps');
+      console.error('Breakdown goal error:', err);
+      toast.error('Could not generate AI steps. Please try again.');
     } finally {
       setBreakingDown(null);
     }
@@ -325,9 +342,9 @@ const Goals = () => {
                     <span>Progress</span>
                     <span>{progress}%</span>
                   </div>
-                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-stone-100 dark:bg-stone-800 h-2.5 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-zinc-900 dark:bg-zinc-100 rounded-full transition-all duration-300"
+                      className="h-full bg-amber-500 rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
@@ -335,8 +352,8 @@ const Goals = () => {
 
                 {/* Milestones List */}
                 {milestones.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  <div className="space-y-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                       Milestones ({doneCount}/{milestones.length})
                     </span>
                     <div className="space-y-1.5">
@@ -344,14 +361,14 @@ const Goals = () => {
                         <div
                           key={mIdx}
                           onClick={() => handleToggleMilestone(goal, mIdx)}
-                          className="flex items-center space-x-2.5 p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer text-xs transition-colors"
+                          className="flex items-center space-x-2.5 p-2 rounded-lg hover:bg-amber-50/50 dark:hover:bg-stone-800/60 cursor-pointer text-xs transition-colors"
                         >
                           {m.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-amber-500 shrink-0" />
                           ) : (
-                            <Circle className="w-4 h-4 text-zinc-400 shrink-0" />
+                            <Circle className="w-4 h-4 text-stone-400 shrink-0" />
                           )}
-                          <span className={`${m.completed ? 'line-through text-zinc-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                          <span className={`${m.completed ? 'line-through text-stone-400' : 'text-stone-800 dark:text-stone-200'}`}>
                             {m.title}
                           </span>
                         </div>

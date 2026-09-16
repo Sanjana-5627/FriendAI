@@ -171,8 +171,9 @@ Return ONLY a JSON object matching this schema:
   "energyScore": 7
 }`;
 
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
+        const result = await generateWithTimeout(model, prompt, 8000);
+        let responseText = result.response.text();
+        responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           reviewResult = JSON.parse(jsonMatch[0]);
@@ -225,7 +226,15 @@ router.get('/reflections', authenticateToken, async (req, res) => {
   }
 });
 
-// Interactive AI Companion Chat with Context & Safety
+// Safe timeout helper so AI generation never hangs and always responds timely
+const generateWithTimeout = async (model, prompt, timeoutMs = 8000) => {
+  return Promise.race([
+    model.generateContent(prompt),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('AI generation timed out')), timeoutMs))
+  ]);
+};
+
+// Conversational AI Companion Chat
 router.post('/chat', authenticateToken, async (req, res) => {
   try {
     const { message, history = [] } = req.body;
@@ -245,20 +254,44 @@ router.post('/chat', authenticateToken, async (req, res) => {
     const userProfile = user?.profile || {};
     const userName = user?.name || 'friend';
 
+    // Fetch user's latest day review & today's checkin so companion possesses context of their day
+    const todayStr = new Date().toISOString().split('T')[0];
+    let dayContext = 'No day debrief logged yet today.';
+    try {
+      const journalEntries = await storage.findJournalEntries(
+        { user_id: req.user.id },
+        { sort: { created_at: -1 } }
+      );
+      if (journalEntries && journalEntries.length > 0) {
+        const latestEntry = journalEntries[0];
+        dayContext = `User's latest day story/review (${latestEntry.date || 'today'}): "${latestEntry.transcription || latestEntry.headline || ''}". AI response summary: "${latestEntry.ai_response?.headline || ''} - ${latestEntry.ai_response?.reflectionPrompt || ''}".`;
+      }
+      const checkIns = await storage.findWellnessCheckIns({ user_id: req.user.id, date: todayStr });
+      if (checkIns && checkIns.length > 0) {
+        const c = checkIns[0];
+        dayContext += ` Today's wellness metrics: Mood ${c.mood}/10, Energy ${c.energy}/10, Stress ${c.stress}/10.`;
+      }
+    } catch (fetchErr) {
+      console.warn('Could not load day context for chat:', fetchErr.message);
+    }
+
     let chatReply = null;
     const model = getGeminiModel();
 
     if (model) {
       try {
         const recentHistory = history.slice(-6).map(h => `${h.type === 'user' ? 'User' : 'FriendAI'}: ${h.content}`).join('\n');
-        const prompt = `You are FriendAI, a personal wellness and anti-loneliness companion for ${userName}.
-You are warm, empathetic, realistic, and encouraging. You are an AI companion, NOT a doctor, therapist, or emergency service.
-User context:
+        const prompt = `You are FriendAI, a warm, joyful, perceptive personal wellness companion and confidant for ${userName}.
+You are an empathetic, emotionally intelligent friend, NOT a clinical doctor or therapist.
+
+User Context:
 - Name: ${userName}
 - Age group: ${userProfile.age_range || 'adult'}
 - Interests: ${(userProfile.interests || []).join(', ')}
 - Work/study routine: ${userProfile.work_schedule?.type || 'standard'}
-- Preferred activities: ${(userProfile.preferred_activities || []).join(', ')}
+
+User's Day State & Input of the Day:
+${dayContext}
 
 Recent conversation:
 ${recentHistory}
@@ -268,25 +301,26 @@ User's new message:
 
 Guidelines:
 1. Respond warmly and conversationally in 2-4 sentences.
-2. Validate their feelings without hollow toxic positivity.
-3. If they mention feeling lonely, overwhelmed, or stuck, gently propose 1 small real-world action (e.g. taking a walk, having tea, calling a friend, visiting a cafe).
-4. If relevant, propose 1-3 practical suggestion bullet points.
-5. Never pretend to be human or provide medical diagnosis.
+2. If the user refers to their day or experiences, connect naturally with their day's story or feelings.
+3. Validate their feelings with genuine empathy and uplifting optimism.
+4. If they feel stuck, tired, or lonely, offer 1 small, delightful real-world action (e.g., getting sunlight, enjoying tea, playing music, taking a break).
+5. If helpful, propose 1-2 practical action pills.
 
-Respond in JSON format:
+Respond strictly in JSON format:
 {
   "reply": "Your conversational response",
-  "suggestions": ["Suggestion 1", "Suggestion 2"]
+  "suggestions": ["Optional suggestion 1", "Optional suggestion 2"]
 }`;
 
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
+        const result = await generateWithTimeout(model, prompt, 8000);
+        let responseText = result.response.text();
+        responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           chatReply = JSON.parse(jsonMatch[0]);
         }
       } catch (err) {
-        console.warn('Gemini chat error, using algorithmic fallback:', err.message);
+        console.warn('Gemini chat error/timeout, using algorithmic fallback:', err.message);
       }
     }
 
@@ -334,8 +368,10 @@ Respond with ONLY valid JSON in this format:
     { "title": "Follow-up practice step 3", "priority": "medium" }
   ]
 }`;
-        const result = await model.generateContent(prompt);
-        const jsonMatch = result.response.text().match(/\{[\s\S]*\}/);
+        const result = await generateWithTimeout(model, prompt, 8000);
+        let responseText = result.response.text();
+        responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) breakdown = JSON.parse(jsonMatch[0]);
       } catch (err) {
         console.warn('Gemini goal breakdown error, using fallback:', err.message);
@@ -346,7 +382,11 @@ Respond with ONLY valid JSON in this format:
       breakdown = generateGoalBreakdown(title, category);
     }
 
-    res.json(breakdown);
+    res.json({
+      milestones: breakdown.milestones || [],
+      tasks: breakdown.tasks || breakdown.suggestedTasks || [],
+      suggestedTasks: breakdown.suggestedTasks || breakdown.tasks || []
+    });
   } catch (error) {
     console.error('Goal breakdown error:', error);
     res.status(500).json({ error: 'Failed to break down goal' });

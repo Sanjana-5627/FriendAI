@@ -141,10 +141,13 @@ router.put('/:id/feedback', authenticateToken, async (req, res) => {
 // Nearby Places & Activities Directory with rich filters
 router.get('/places', authenticateToken, (req, res) => {
   try {
-    const { category, cost, indoorOutdoor, maxDistanceKm, search } = req.query;
+    const { category, cost, minCost, maxCost, location, indoorOutdoor, maxDistanceKm, search } = req.query;
     const filtered = filterPlacesAndActivities({
       category,
       cost,
+      minCost,
+      maxCost,
+      location,
       indoorOutdoor,
       maxDistanceKm,
       search

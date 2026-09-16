@@ -78,22 +78,22 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-15">
             
-            {/* Left: Brand Logo & Title (Monochromatic & Minimalist) */}
+            {/* Left: Brand Logo & Title (Happy Warm Theme) */}
             <div className="flex items-center space-x-3 sm:space-x-4">
               <Link to="/dashboard" className="flex items-center space-x-2.5 group">
-                <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 transition-transform group-hover:scale-105">
+                <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-sm shadow-amber-500/20 transition-transform group-hover:scale-105">
                   <Feather className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-base text-zinc-900 dark:text-zinc-100 tracking-tight leading-none">
-                    Friend<span className="text-zinc-500 dark:text-zinc-400">AI</span>
+                    Friend<span className="text-amber-500">AI</span>
                   </span>
-                  <span className="text-[9px] text-zinc-400 font-medium tracking-wider uppercase mt-0.5">Companion</span>
+                  <span className="text-[9px] text-amber-600/80 dark:text-amber-400/80 font-medium tracking-wider uppercase mt-0.5">Companion</span>
                 </div>
               </Link>
             </div>
 
-            {/* Middle: Desktop Navigation Links (Understated Monochromatic) */}
+            {/* Middle: Desktop Navigation Links */}
             <div className="hidden xl:flex items-center space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -104,8 +104,8 @@ const Navbar = () => {
                     to={item.href}
                     className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                        ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20 font-semibold'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -121,7 +121,7 @@ const Navbar = () => {
               {/* Quick Daily Check-In CTA */}
               <button
                 onClick={() => setCheckInModalOpen(true)}
-                className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-semibold hover:opacity-90 transition-all active:scale-95"
+                className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-sm shadow-amber-500/25 transition-all active:scale-95"
               >
                 <span>Daily Check-In</span>
               </button>
@@ -129,7 +129,7 @@ const Navbar = () => {
               {/* Emergency Crisis Help Shortcut */}
               <button
                 onClick={() => setSafetyModalOpen(true)}
-                className="p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all"
+                className="p-2 rounded-lg text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
                 title="Crisis Support & 988 Lifeline"
               >
                 <ShieldAlert className="w-4 h-4" />
@@ -138,19 +138,19 @@ const Navbar = () => {
               {/* Notification Drawer Button */}
               <button
                 onClick={() => setNotificationDrawerOpen(true)}
-                className="relative p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all"
+                className="relative p-2 rounded-lg text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
                 title="Notifications"
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotifications > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-zinc-900 dark:bg-zinc-100 rounded-full ring-2 ring-white dark:ring-zinc-950" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-white dark:ring-zinc-950" />
                 )}
               </button>
 
               {/* Dark / Light Toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all"
+                className="p-2 rounded-lg text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
                 title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -160,9 +160,9 @@ const Navbar = () => {
               <div className="relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all"
+                  className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center justify-center text-xs font-bold">
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 border border-amber-300/40 flex items-center justify-center text-xs font-bold">
                     {user?.name ? user.name[0].toUpperCase() : 'U'}
                   </div>
                 </button>
@@ -215,7 +215,7 @@ const Navbar = () => {
                 setCheckInModalOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="w-full mb-2 py-2 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-xs font-bold text-center"
+              className="w-full mb-2 py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold text-center shadow-sm shadow-amber-500/20"
             >
               Daily Wellness Check-In
             </button>
@@ -230,8 +230,8 @@ const Navbar = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium ${
                     isActive
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                      ? 'bg-amber-500 text-white font-semibold'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:bg-amber-50 dark:hover:bg-amber-950/20'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

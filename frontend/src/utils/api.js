@@ -99,6 +99,7 @@ export const apiHelpers = {
   createHabit: (habit) => api.post('/api/habits', habit),
   updateHabit: (id, updates) => api.put(`/api/habits/${id}`, updates),
   completeHabit: (id, notes = '', date = null) => api.post(`/api/habits/${id}/complete`, { notes, date }),
+  undoHabit: (id, date = null) => api.post(`/api/habits/${id}/undo`, { date }),
   deleteHabit: (id) => api.delete(`/api/habits/${id}`),
 
   // Daily Timetable Planner

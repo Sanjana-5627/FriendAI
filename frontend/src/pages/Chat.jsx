@@ -255,13 +255,13 @@ const Chat = () => {
         </div>
 
         {/* Tab Pills */}
-        <div className="flex items-center space-x-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+        <div className="flex items-center space-x-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab('debrief')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
               activeTab === 'debrief'
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
-                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/25 font-bold'
+                : 'text-stone-500 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -272,20 +272,20 @@ const Chat = () => {
             onClick={() => setActiveTab('chat')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
               activeTab === 'chat'
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
-                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/25 font-bold'
+                : 'text-stone-500 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Dialogue</span>
+            <span>Companion Dialogue</span>
           </button>
 
           <button
             onClick={() => setActiveTab('history')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 ${
               activeTab === 'history'
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs'
-                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/25 font-bold'
+                : 'text-stone-500 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
             <History className="w-3.5 h-3.5" />
@@ -458,15 +458,15 @@ const Chat = () => {
                 )}
 
                 {currentReview.tomorrowIntention && (
-                  <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-50 dark:bg-zinc-950">
+                  <div className="p-4 rounded-xl border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/40 dark:bg-stone-950">
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Suggested Micro-Intention For Tomorrow</p>
-                      <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">{currentReview.tomorrowIntention}</p>
+                      <p className="text-[10px] uppercase font-bold text-amber-800 dark:text-amber-400 tracking-wider">Suggested Micro-Intention For Tomorrow</p>
+                      <p className="text-xs sm:text-sm font-semibold text-stone-800 dark:text-stone-200 mt-0.5">{currentReview.tomorrowIntention}</p>
                     </div>
                     <div className="flex items-center space-x-2 shrink-0">
                       <button
                         onClick={() => handleAddActionAsTask(currentReview.tomorrowIntention)}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-[11px] font-semibold flex items-center space-x-1"
+                        className="btn-secondary text-[11px] font-semibold flex items-center space-x-1"
                       >
                         <Plus className="w-3 h-3" />
                         <span>Add as Task</span>
@@ -474,6 +474,25 @@ const Chat = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Bridge to Open Companion */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-50/60 dark:bg-stone-900/60 p-4 rounded-xl border border-amber-200/80 dark:border-stone-800">
+                  <div className="space-y-0.5 text-left">
+                    <h4 className="text-xs font-bold text-stone-900 dark:text-stone-100">Unpack Your Day in Real Time</h4>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">Take this review into live dialogue with your companion.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setActiveTab('chat');
+                      const promptText = `I just debriefed my day: "${currentReview.headline}". Let's talk about it.`;
+                      setChatInput(promptText);
+                    }}
+                    className="btn-primary text-xs flex items-center space-x-2 shrink-0"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Talk with Companion →</span>
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -581,15 +600,37 @@ const Chat = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Quick Prompts Strip (Input of the Day) */}
+          <div className="px-4 py-2 bg-amber-50/50 dark:bg-stone-900/60 border-t border-stone-200/60 dark:border-stone-800 flex items-center space-x-2 overflow-x-auto scrollbar-none text-[11px]">
+            <span className="text-amber-800 dark:text-amber-400 font-bold shrink-0 text-[10px] uppercase tracking-wider">Quick Starters:</span>
+            {[
+              "Reflect on my day with me",
+              "I felt really drained today",
+              "Celebrate my win today",
+              "How can I set myself up for a restful evening?",
+              "Help me plan my tomorrow"
+            ].map((pill, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setChatInput(pill)}
+                className="bg-white hover:bg-amber-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700 border border-amber-200/70 dark:border-stone-700 px-2.5 py-1 rounded-lg whitespace-nowrap transition-colors shadow-xs"
+              >
+                {pill}
+              </button>
+            ))}
+          </div>
+
           {/* Chat Input Bar */}
-          <div className="p-3.5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center space-x-2">
+          <div className="p-3.5 border-t border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 flex items-center space-x-2">
             <button
               onClick={toggleSpeech}
               className={`p-2 rounded-xl transition-all ${
                 isListening
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 animate-pulse'
-                  : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30 animate-pulse'
+                  : 'text-stone-400 hover:text-amber-600 dark:hover:text-amber-400'
               }`}
+              title="Speak message"
             >
               <Mic className="w-4 h-4" />
             </button>
@@ -599,14 +640,14 @@ const Chat = () => {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChatMessage()}
-              placeholder="Talk to your companion about anything..."
-              className="flex-1 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              placeholder="Talk with your companion about your day, feelings, or next steps..."
+              className="flex-1 bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
             />
 
             <button
               onClick={handleSendChatMessage}
               disabled={!chatInput.trim() || isChatLoading}
-              className="p-2.5 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 disabled:opacity-40 transition-all"
+              className="btn-primary p-2.5 rounded-xl flex items-center justify-center shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>

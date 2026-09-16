@@ -188,6 +188,46 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
   }
 });
 
+// Undo habit completion (e.g. for today)
+router.post('/:id/undo', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.body;
+
+    const habits = await storage.findHabits({ _id: id, user_id: req.user.id });
+    if (!habits || habits.length === 0) {
+      return res.status(404).json({ error: 'Habit not found or unauthorized' });
+    }
+
+    const habit = habits[0];
+    const targetDate = date ? new Date(date) : new Date();
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+
+    // Filter out completion for this calendar date
+    const updatedCompletions = (habit.completions || []).filter(
+      c => new Date(c.date).toISOString().split('T')[0] !== targetDateStr
+    );
+
+    const streakInfo = calculateStreaks(updatedCompletions);
+
+    const updatedHabit = await storage.updateHabit(id, {
+      completions: updatedCompletions,
+      streak: streakInfo,
+      updated_at: new Date()
+    });
+
+    res.json({
+      ...updatedHabit,
+      completedToday: false,
+      streak: streakInfo,
+      message: 'Habit completion undone successfully'
+    });
+  } catch (error) {
+    console.error('Undo habit error:', error);
+    res.status(500).json({ error: 'Failed to undo habit' });
+  }
+});
+
 // Update habit
 router.put('/:id', authenticateToken, async (req, res) => {
   try {

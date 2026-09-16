@@ -8,7 +8,8 @@ import {
   Flame, 
   Sparkles, 
   CheckCircle2, 
-  Circle
+  Circle,
+  RotateCcw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -80,6 +81,16 @@ const Habits = () => {
       } else {
         toast.error('Failed to complete habit');
       }
+    }
+  };
+
+  const handleUndoHabit = async (habitId, habitName) => {
+    try {
+      await apiHelpers.undoHabit(habitId);
+      toast.success(`Undone completion for "${habitName}"`);
+      fetchHabits();
+    } catch (error) {
+      toast.error('Failed to undo habit');
     }
   };
 
@@ -261,29 +272,34 @@ const Habits = () => {
                 key={habit.id || habit._id}
                 className={`p-5 rounded-2xl border transition-all ${
                   completedToday
-                    ? 'bg-zinc-50/60 dark:bg-zinc-900/30 border-zinc-200/60 dark:border-zinc-800/60'
-                    : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 shadow-xs'
+                    ? 'bg-amber-50/40 dark:bg-stone-900/40 border-amber-200/60 dark:border-stone-800'
+                    : 'bg-white dark:bg-stone-900 border-stone-200/80 dark:border-stone-800 shadow-xs hover:border-amber-300 dark:hover:border-stone-700'
                 }`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center space-x-3.5 flex-1 min-w-0">
-                    <button
-                      onClick={() => !completedToday && completeHabit(habit.id || habit._id, habit.name)}
-                      disabled={completedToday}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                        completedToday
-                          ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 cursor-default'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-                      }`}
-                      title={completedToday ? 'Completed today' : 'Mark completed today'}
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
+                    {completedToday ? (
+                      <button
+                        onClick={() => handleUndoHabit(habit.id || habit._id, habit.name)}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-500 text-white shadow-sm shadow-amber-500/25 hover:bg-amber-600 transition-all shrink-0"
+                        title="Click to undo today's completion"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => completeHabit(habit.id || habit._id, habit.name)}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center bg-stone-100 dark:bg-stone-800 text-stone-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-all shrink-0"
+                        title="Mark completed today"
+                      >
+                        <Circle className="w-4 h-4" />
+                      </button>
+                    )}
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
                         <h3 className={`text-sm font-semibold truncate ${
-                          completedToday ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'
+                          completedToday ? 'line-through text-stone-400 dark:text-stone-500' : 'text-stone-900 dark:text-stone-100'
                         }`}>
                           {habit.name}
                         </h3>
@@ -291,35 +307,49 @@ const Habits = () => {
                           {habit.category || 'wellness'}
                         </span>
                         {completedToday && (
-                          <span className="text-[10px] text-zinc-400 font-mono">
-                            ✓ Done
+                          <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold bg-amber-100/80 dark:bg-amber-950/50 px-2 py-0.5 rounded-md">
+                            ✓ Done Today
                           </span>
                         )}
                       </div>
 
                       {habit.description && (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                        <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 truncate">
                           {habit.description}
                         </p>
                       )}
 
-                      <div className="flex items-center space-x-3 mt-1 text-[11px] text-zinc-400">
-                        <span className="font-mono">
-                          Streak: <strong>{currentStreak}d</strong>
+                      <div className="flex items-center space-x-3 mt-1 text-[11px] text-stone-400">
+                        <span className="font-mono flex items-center space-x-1">
+                          <Flame className="w-3 h-3 text-amber-500" />
+                          <span>Streak: <strong className="text-stone-800 dark:text-stone-200">{currentStreak}d</strong></span>
                         </span>
                         {longestStreak > 0 && (
-                          <span>Best: <strong>{longestStreak}d</strong></span>
+                          <span>Best: <strong className="text-stone-800 dark:text-stone-200">{longestStreak}d</strong></span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => deleteHabit(habit.id || habit._id, habit.name)}
-                    className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    {completedToday && (
+                      <button
+                        onClick={() => handleUndoHabit(habit.id || habit._id, habit.name)}
+                        className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold flex items-center space-x-1 border border-amber-200/70 transition-all"
+                        title="Undo today's habit completion"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Undo</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => deleteHabit(habit.id || habit._id, habit.name)}
+                      className="p-1.5 text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* 7-Day Completion Mini-Grid */}
