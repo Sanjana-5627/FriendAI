@@ -8,7 +8,10 @@ import {
   Circle, 
   Sparkles, 
   Check, 
-  Layers 
+  Layers,
+  Pencil,
+  X,
+  Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,6 +22,15 @@ const Goals = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [filter, setFilter] = useState('active'); // active, completed, all
   const [breakingDown, setBreakingDown] = useState(null); // goal id
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    category: 'personal',
+    target_date: '',
+    milestones: []
+  });
+  const [editMilestoneInput, setEditMilestoneInput] = useState('');
 
   const [newGoal, setNewGoal] = useState({
     title: '',
@@ -79,6 +91,72 @@ const Goals = () => {
     } catch (err) {
       toast.error('Failed to create goal');
     }
+  };
+
+  const handleStartEdit = (goal) => {
+    setEditingGoal(goal);
+    const dateVal = goal.target_date 
+      ? new Date(goal.target_date).toISOString().split('T')[0] 
+      : (goal.deadline ? new Date(goal.deadline).toISOString().split('T')[0] : '');
+    
+    setEditFormData({
+      title: goal.title || '',
+      description: goal.description || '',
+      category: goal.category || 'personal',
+      target_date: dateVal,
+      milestones: (goal.milestones || []).map(m => ({
+        title: typeof m === 'string' ? m : m.title,
+        completed: !!m.completed
+      }))
+    });
+    setEditMilestoneInput('');
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editFormData.title.trim()) {
+      toast.error('Goal title is required');
+      return;
+    }
+    const goalId = editingGoal._id || editingGoal.id;
+    try {
+      await apiHelpers.updateGoal(goalId, {
+        title: editFormData.title.trim(),
+        description: editFormData.description.trim(),
+        category: editFormData.category,
+        target_date: editFormData.target_date || null,
+        deadline: editFormData.target_date || null,
+        milestones: editFormData.milestones
+      });
+      toast.success('Goal updated successfully! ✓');
+      setEditingGoal(null);
+      fetchGoals();
+    } catch (err) {
+      toast.error('Failed to update goal');
+    }
+  };
+
+  const handleAddEditMilestone = () => {
+    if (!editMilestoneInput.trim()) return;
+    setEditFormData(prev => ({
+      ...prev,
+      milestones: [...prev.milestones, { title: editMilestoneInput.trim(), completed: false }]
+    }));
+    setEditMilestoneInput('');
+  };
+
+  const handleRemoveEditMilestone = (idx) => {
+    setEditFormData(prev => ({
+      ...prev,
+      milestones: prev.milestones.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleEditMilestoneChange = (idx, newTitle) => {
+    setEditFormData(prev => ({
+      ...prev,
+      milestones: prev.milestones.map((m, i) => i === idx ? { ...m, title: newTitle } : m)
+    }));
   };
 
   const handleToggleMilestone = async (goal, milestoneIdx) => {
@@ -328,8 +406,17 @@ const Goals = () => {
                     </button>
 
                     <button
+                      onClick={() => handleStartEdit(goal)}
+                      className="p-1.5 text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg transition-colors"
+                      title="Edit Goal"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+
+                    <button
                       onClick={() => handleDeleteGoal(goal)}
-                      className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-lg transition-colors"
+                      className="p-1.5 text-zinc-400 hover:text-red-500 rounded-lg transition-colors"
+                      title="Delete Goal"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -379,6 +466,152 @@ const Goals = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Edit Goal Modal */}
+      {editingGoal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Pencil className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">Edit Goal</h3>
+              </div>
+              <button
+                onClick={() => setEditingGoal(null)}
+                className="p-1.5 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                  Goal Title *
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
+                  required
+                  placeholder="e.g. Run a 5K race, Read 10 books"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                  Description
+                </label>
+                <textarea
+                  rows="2"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Why this matters to you..."
+                  className="input-field"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={editFormData.category}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="personal">Personal Growth</option>
+                    <option value="fitness">Health & Fitness</option>
+                    <option value="career">Career & Study</option>
+                    <option value="learning">Skill & Learning</option>
+                    <option value="mindfulness">Mindfulness & Rest</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                    Target Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editFormData.target_date}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, target_date: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              {/* Milestones Editor */}
+              <div className="space-y-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+                <label className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                  Milestones ({editFormData.milestones.length})
+                </label>
+                
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {editFormData.milestones.map((m, idx) => (
+                    <div key={idx} className="flex items-center space-x-2">
+                      <span className="text-[10px] text-stone-400 font-mono w-4 shrink-0">{idx + 1}.</span>
+                      <input
+                        type="text"
+                        value={m.title}
+                        onChange={(e) => handleEditMilestoneChange(idx, e.target.value)}
+                        className="input-field py-1.5 text-xs flex-1"
+                        placeholder="Milestone title"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEditMilestone(idx)}
+                        className="p-1.5 text-stone-400 hover:text-red-500 transition-colors"
+                        title="Remove milestone"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new milestone row */}
+                <div className="flex items-center space-x-2 pt-1">
+                  <input
+                    type="text"
+                    value={editMilestoneInput}
+                    onChange={(e) => setEditMilestoneInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddEditMilestone(); } }}
+                    placeholder="Add a new milestone step..."
+                    className="input-field py-1.5 text-xs flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddEditMilestone}
+                    className="btn-secondary text-xs px-3 py-1.5 shrink-0"
+                  >
+                    Add Step
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-stone-100 dark:border-stone-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingGoal(null)}
+                  className="btn-secondary text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary text-xs flex items-center space-x-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

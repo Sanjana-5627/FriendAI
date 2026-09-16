@@ -15,7 +15,8 @@ import {
   Check, 
   PhoneCall,
   Sun,
-  ExternalLink
+  ExternalLink,
+  Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';

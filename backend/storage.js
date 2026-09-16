@@ -263,6 +263,10 @@ class StorageAdapter {
     let tasks = Array.from(this.inMemory.tasks.entries())
       .map(([id, task]) => ({ ...task, _id: id, id: id }));
     
+    if (query._id || query.id) {
+      const targetId = String(query._id || query.id);
+      tasks = tasks.filter(t => String(t._id) === targetId || String(t.id) === targetId);
+    }
     if (query.user_id) {
       const queryUserId = String(query.user_id);
       tasks = tasks.filter(t => String(t.user_id) === queryUserId);
@@ -358,12 +362,19 @@ class StorageAdapter {
     let goals = Array.from(this.inMemory.goals.entries())
       .map(([id, goal]) => ({ ...goal, _id: id, id: id }));
     
+    if (query._id || query.id) {
+      const targetId = String(query._id || query.id);
+      goals = goals.filter(g => String(g._id) === targetId || String(g.id) === targetId);
+    }
     if (query.user_id) {
       const queryUserId = String(query.user_id);
       goals = goals.filter(g => String(g.user_id) === queryUserId);
     }
     if (query.status) {
       goals = goals.filter(g => g.status === query.status);
+    }
+    if (query.category) {
+      goals = goals.filter(g => g.category === query.category);
     }
     
     if (options.sort) {
@@ -435,12 +446,19 @@ class StorageAdapter {
     let habits = Array.from(this.inMemory.habits.entries())
       .map(([id, habit]) => ({ ...habit, _id: id, id: id }));
     
+    if (query._id || query.id) {
+      const targetId = String(query._id || query.id);
+      habits = habits.filter(h => String(h._id) === targetId || String(h.id) === targetId);
+    }
     if (query.user_id) {
       const queryUserId = String(query.user_id);
       habits = habits.filter(h => String(h.user_id) === queryUserId);
     }
     if (query.active !== undefined) {
       habits = habits.filter(h => h.active === query.active);
+    }
+    if (query.category) {
+      habits = habits.filter(h => h.category === query.category);
     }
     
     if (options.sort) {

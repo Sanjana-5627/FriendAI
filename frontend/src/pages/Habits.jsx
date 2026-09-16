@@ -107,11 +107,13 @@ const Habits = () => {
   };
 
   const isCompletedToday = (habit) => {
+    if (habit.completedToday !== undefined) return habit.completedToday;
     if (!habit.completions || habit.completions.length === 0) return false;
     const today = new Date().toISOString().split('T')[0];
-    return habit.completions.some(c => 
-      new Date(c.date).toISOString().split('T')[0] === today
-    );
+    return habit.completions.some(c => {
+      if (!c || !c.date) return false;
+      return new Date(c.date).toISOString().split('T')[0] === today;
+    });
   };
 
   const filteredHabits = habits.filter(h => {
